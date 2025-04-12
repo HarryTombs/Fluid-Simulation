@@ -35,3 +35,13 @@ https://matthias-research.github.io/pages/tenMinutePhysics/index.html
 https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
 
 https://github.com/MauriceGit/Water_Simulation
+
+https://bassicali.github.io/inkbox/
+
+https://github.com/bassicali/inkbox
+
+https://dl.acm.org/doi/abs/10.1145/1198555.1198790
+
+https://www.youtube.com/watch?v=wg4om77Drr0&t=27s
+
+https://www.youtube.com/watch?v=x6mcua0HOJs
