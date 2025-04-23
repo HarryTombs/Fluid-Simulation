@@ -13,12 +13,12 @@ bool gQuit = false;
 
 float verticies[] = 
 {
-        0.5f,  0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-       -0.5f,  0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f, 
-       -0.5f, -0.5f, 0.0f, 
-       -0.5f,  0.5f, 0.0f   
+        1.0f,  1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f,
+       -1.0f,  1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f, 
+       -1.0f, -1.0f, 0.0f, 
+       -1.0f,  1.0f, 0.0f   
 };
 
 const char *vertexShaderSource = "#version 330 core\n"
@@ -143,7 +143,7 @@ void MainLoop()
 
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO); 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         SDL_GL_SwapWindow(GraphicsApplicationWindow);
     }
