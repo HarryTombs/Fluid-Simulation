@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include "SDLWindow.h"
+#include "Shaders.h"
 
 
 int ScreenHeight = 640;
@@ -35,11 +36,12 @@ const char *fragmentShaderSource = "#version 330 core\n"
     "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
     "}\n\0";
 
+Shader myShader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragement.glsl");
+
 unsigned int shaderProgram;
 
 unsigned int VBO;
 unsigned int VAO;
-
 
 
 
@@ -89,24 +91,25 @@ void InitialiseProgram()
     }
     GetOpenGLVersionInfo();
 
+    myShader.use();
 
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
+    // unsigned int vertexShader;
+    // vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    // glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    // glCompileShader(vertexShader);
 
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
+    // unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    // glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    // glCompileShader(fragmentShader);
 
-    shaderProgram = glCreateProgram();
+    // shaderProgram = glCreateProgram();
 
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    // glAttachShader(shaderProgram, vertexShader);
+    // glAttachShader(shaderProgram, fragmentShader);
+    // glLinkProgram(shaderProgram);
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    // glDeleteShader(vertexShader);
+    // glDeleteShader(fragmentShader);
 
     glGenBuffers(1,&VBO);
     glGenVertexArrays(1, &VAO);
