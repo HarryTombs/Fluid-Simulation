@@ -12,6 +12,8 @@ SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
+
+
 float verticies[] = 
 {
         1.0f,  1.0f, 0.0f,
@@ -36,13 +38,12 @@ const char *fragmentShaderSource = "#version 330 core\n"
     "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
     "}\n\0";
 
-Shader myShader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragement.glsl");
-
 unsigned int shaderProgram;
 
 unsigned int VBO;
 unsigned int VAO;
 
+Shader* myShader = nullptr;
 
 
 void GetOpenGLVersionInfo(){
@@ -90,8 +91,8 @@ void InitialiseProgram()
         exit(1);
     }
     GetOpenGLVersionInfo();
+    std::cout << "OpenGL initialized successfully!" << std::endl;
 
-    myShader.use();
 
     // unsigned int vertexShader;
     // vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -111,6 +112,7 @@ void InitialiseProgram()
     // glDeleteShader(vertexShader);
     // glDeleteShader(fragmentShader);
 
+    myShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.vs","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragment.fs");
     glGenBuffers(1,&VBO);
     glGenVertexArrays(1, &VAO);
 
@@ -144,7 +146,9 @@ void MainLoop()
         glClearColor(0.9f,0.7f,0.f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shaderProgram);
+        myShader->use();
+
+
         glBindVertexArray(VAO); 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -162,6 +166,7 @@ void CleanUp()
 
 
 int main(){
+
     InitialiseProgram();
 
     MainLoop();
