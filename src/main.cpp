@@ -24,26 +24,16 @@ float verticies[] =
        -1.0f,  1.0f, 0.0f   
 };
 
-const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\n\0";
-
-unsigned int shaderProgram;
 
 unsigned int VBO;
 unsigned int VAO;
 
-Shader* myShader = nullptr;
+Shader* finalDraw = nullptr;
+// Shader* advectShader = nullptr;
+// Shader* addForce = nullptr;
+// Shader* divergence = nullptr;
+// Shader* jacobiIteration = nullptr;
+// Shader* subtract = nullptr;
 
 
 void GetOpenGLVersionInfo(){
@@ -94,25 +84,14 @@ void InitialiseProgram()
     std::cout << "OpenGL initialized successfully!" << std::endl;
 
 
-    // unsigned int vertexShader;
-    // vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    // glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    // glCompileShader(vertexShader);
 
-    // unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    // glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    // glCompileShader(fragmentShader);
+    finalDraw = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragment.glsl");
 
-    // shaderProgram = glCreateProgram();
-
-    // glAttachShader(shaderProgram, vertexShader);
-    // glAttachShader(shaderProgram, fragmentShader);
-    // glLinkProgram(shaderProgram);
-
-    // glDeleteShader(vertexShader);
-    // glDeleteShader(fragmentShader);
-
-    myShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.vs","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragment.fs");
+    // advectShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/advectionFragment.glsl");
+    // addForce = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/addForceFragment.glsl");
+    // divergence = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/diverganceFragment.glsl");
+    // jacobiIteration = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/jacobiIterationFragment.glsl");
+    // subtract = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/subtractFragment.glsl");
     glGenBuffers(1,&VBO);
     glGenVertexArrays(1, &VAO);
 
@@ -146,7 +125,19 @@ void MainLoop()
         glClearColor(0.9f,0.7f,0.f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        myShader->use();
+        // per frame 
+        // 1 advection of dye and velocity, out put new velocity 
+        // calculate external force (mouse input) apply to velocity, output new
+        // measure the divergance, (difference of inflow and outflow) output divergance
+        // PER ITERATION, "smooth" the divergance till its a normal amount 20-40 times per cell
+        // correct velocity based on smoothed divergance
+        // render the dye to screen
+        // this is all in glsl
+
+        // you need FBOs to save them all to like in deffered shading
+        // Make an FBO class and a fluid class to do that
+
+        finalDraw->use();
 
 
         glBindVertexArray(VAO); 
