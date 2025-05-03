@@ -4,6 +4,9 @@
 #include <GL/glut.h>
 #include "SDLWindow.h"
 #include "Shaders.h"
+#include "Framebuffer.h"
+
+
 
 
 int ScreenHeight = 640;
@@ -27,6 +30,8 @@ float verticies[] =
 
 unsigned int VBO;
 unsigned int VAO;
+
+Framebuffer dyeFBO;
 
 Shader* finalDraw = nullptr;
 // Shader* advectShader = nullptr;
@@ -85,7 +90,7 @@ void InitialiseProgram()
 
 
 
-    finalDraw = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/fragment.glsl");
+    finalDraw = new Shader("/home/s5729748/Desktop/Bournemouth/Term2/Simulation/Fluid-Simulation/shaders/vertex.glsl","/home/s5729748/Desktop/Bournemouth/Term2/Simulation/Fluid-Simulation/shaders/fragment.glsl");
 
     // advectShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/advectionFragment.glsl");
     // addForce = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/addForceFragment.glsl");
@@ -101,6 +106,8 @@ void InitialiseProgram()
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0); 
+
+    dyeFBO.create(ScreenWidth,ScreenHeight,GL_RGBA16F);
 
 }
 
@@ -138,8 +145,6 @@ void MainLoop()
         // Make an FBO class and a fluid class to do that
 
         finalDraw->use();
-
-
         glBindVertexArray(VAO); 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
