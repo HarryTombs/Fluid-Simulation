@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <glm/glm.hpp>
 
 class Shader 
 {
@@ -82,6 +83,10 @@ public:
     void setFloat(const std::string &name, float value) const
     {
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
+    };
+    void setVec2(const std::string &name, glm::vec2 value) const 
+    {
+        glUniform2fv(glGetUniformLocation(ID,name.c_str()), 1,&value[0]);
     };
 private:
 void checkCompileErrors(unsigned int shader, std::string type)

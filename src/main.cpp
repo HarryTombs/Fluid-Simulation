@@ -90,7 +90,7 @@ void InitialiseProgram()
 
 
 
-    finalDraw = new Shader("/home/s5729748/Desktop/Bournemouth/Term2/Simulation/Fluid-Simulation/shaders/vertex.glsl","/home/s5729748/Desktop/Bournemouth/Term2/Simulation/Fluid-Simulation/shaders/fragment.glsl");
+    finalDraw = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
 
     // advectShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/advectionFragment.glsl");
     // addForce = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/addForceFragment.glsl");
@@ -124,6 +124,14 @@ void Input()
     }
 }
 
+void RenderQuad()
+{
+    glBindVertexArray(VAO); 
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    SDL_GL_SwapWindow(GraphicsApplicationWindow);
+}
+
+
 void MainLoop()
 {
     while(!gQuit){
@@ -145,10 +153,9 @@ void MainLoop()
         // Make an FBO class and a fluid class to do that
 
         finalDraw->use();
-        glBindVertexArray(VAO); 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        RenderQuad();
 
-        SDL_GL_SwapWindow(GraphicsApplicationWindow);
+
     }
 }
 

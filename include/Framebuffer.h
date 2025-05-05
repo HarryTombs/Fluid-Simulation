@@ -22,6 +22,20 @@ public:
 
 };
 
+struct PingPongBuffer {
+    Framebuffer buffers[2];
+    int writeIndex = 0;
+
+    void create(int w, int h, GLenum format) {
+        buffers[0].create(w, h, format,false);
+        buffers[1].create(w, h, format,false);
+    }
+
+    void swap() { writeIndex = 1 - writeIndex; }
+
+    Framebuffer& read() { return buffers[1 - writeIndex]; }
+    Framebuffer& write() { return buffers[writeIndex]; }
+};
 
 
 #endif
