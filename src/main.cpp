@@ -94,10 +94,12 @@ void InitialiseProgram()
     GetOpenGLVersionInfo();
     std::cout << "OpenGL initialized successfully!" << std::endl;
 
-    sim.init(ScreenWidth,ScreenHeight);
+    sim.init(ScreenHeight,ScreenWidth);
 
-    finalDraw = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
-    OtherDraw = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
+    
+
+    // finalDraw = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
+    // OtherDraw = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
 
     // advectShader = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
     // addForce = new Shader("../shaders/vertex.glsl","../shaders/addForceFragment.glsl");
@@ -150,10 +152,19 @@ void MainLoop()
         deltaTime = (double)((NOW-LAST)*1000) / SDL_GetPerformanceFrequency();
         deltaTime /= 1000.0;
 
+        sim.update(deltaTime);
 
-        // glClearColor(0.9f,0.1f,0.f,1.0f);
+        sim.velocity.write();
+        glClearColor(1.0f, 0.0f, 0.0f, 0.0f); // Constant rightward velocity
         glClear(GL_COLOR_BUFFER_BIT);
+        sim.velocity.swap();
 
+        sim.dye.write();
+        glClearColor(0.9f,0.1f,0.f,1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        sim.dye.swap();
+
+       
         // per frame 
         // 1 advection of dye and velocity, out put new velocity 
         // calculate external force (mouse input) apply to velocity, output new
@@ -166,7 +177,6 @@ void MainLoop()
         // you need FBOs to save them all to like in deffered shading
         // Make an FBO class and a fluid class to do that
 
-        sim.update(deltaTime);
         sim.render();
 
 

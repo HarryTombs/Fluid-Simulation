@@ -15,8 +15,8 @@ void FluidSim::init(int w, int h)
     pressure.create(w,h,GL_RG16F);
     divergence.create(w,h,GL_RG16F);
 
-    advectShader = new Shader("/home/s5729748/Desktop/Bournemouth/2Term/Simulation/Fluid-Simulation/shaders/vertex.glsl","/home/s5729748/Desktop/Bournemouth/2Term/Simulation/Fluid-Simulation/shaders/advectionFragment.glsl");
-    displayShader = new Shader("/home/s5729748/Desktop/Bournemouth/2Term/Simulation/Fluid-Simulation/shaders/vertex.glsl","/home/s5729748/Desktop/Bournemouth/2Term/Simulation/Fluid-Simulation/shaders/fragment.glsl");
+    advectShader = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
+    displayShader = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
 }
 
 
