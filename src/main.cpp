@@ -5,6 +5,7 @@
 #include "SDLWindow.h"
 #include "Shaders.h"
 #include "Framebuffer.h"
+#include "FluidSim.h"
 
 
 
@@ -15,7 +16,11 @@ SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
+Uint64 NOW = SDL_GetPerformanceCounter();
+Uint64 LAST = 0;
+double deltaTime = 0;
 
+FluidSim sim;
 
 float verticies[] = 
 {
@@ -34,6 +39,7 @@ unsigned int VAO;
 Framebuffer dyeFBO;
 
 Shader* finalDraw = nullptr;
+Shader* OtherDraw = nullptr;
 // Shader* advectShader = nullptr;
 // Shader* addForce = nullptr;
 // Shader* divergence = nullptr;
@@ -88,15 +94,16 @@ void InitialiseProgram()
     GetOpenGLVersionInfo();
     std::cout << "OpenGL initialized successfully!" << std::endl;
 
-
+    sim.init(ScreenWidth,ScreenHeight);
 
     finalDraw = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
+    OtherDraw = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
 
-    // advectShader = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/advectionFragment.glsl");
-    // addForce = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/addForceFragment.glsl");
-    // divergence = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/diverganceFragment.glsl");
-    // jacobiIteration = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/jacobiIterationFragment.glsl");
-    // subtract = new Shader("/home/harry/Documents/CPP/Fluid-Simulation/shaders/vertex.glsl","/home/harry/Documents/CPP/Fluid-Simulation/shaders/subtractFragment.glsl");
+    // advectShader = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
+    // addForce = new Shader("../shaders/vertex.glsl","../shaders/addForceFragment.glsl");
+    // divergence = new Shader("../shaders/vertex.glsl","../shaders/diverganceFragment.glsl");
+    // jacobiIteration = new Shader("../shaders/vertex.glsl","../shaders/jacobiIterationFragment.glsl");
+    // subtract = new Shader("../shaders/vertex.glsl","../shaders/subtractFragment.glsl");
     glGenBuffers(1,&VBO);
     glGenVertexArrays(1, &VAO);
 
@@ -107,7 +114,7 @@ void InitialiseProgram()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0); 
 
-    dyeFBO.create(ScreenWidth,ScreenHeight,GL_RGBA16F);
+    // dyeFBO.create(ScreenWidth,ScreenHeight,GL_RGBA16F);
 
 }
 
@@ -137,7 +144,14 @@ void MainLoop()
     while(!gQuit){
         Input();
 
-        glClearColor(0.9f,0.7f,0.f,1.0f);
+        LAST = NOW;
+        NOW = SDL_GetPerformanceCounter();
+
+        deltaTime = (double)((NOW-LAST)*1000) / SDL_GetPerformanceFrequency();
+        deltaTime /= 1000.0;
+
+
+        // glClearColor(0.9f,0.1f,0.f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // per frame 
@@ -152,8 +166,11 @@ void MainLoop()
         // you need FBOs to save them all to like in deffered shading
         // Make an FBO class and a fluid class to do that
 
-        finalDraw->use();
-        RenderQuad();
+        sim.update(deltaTime);
+        sim.render();
+
+
+        // finalDraw->use();
 
 
     }
@@ -162,6 +179,8 @@ void MainLoop()
 
 void CleanUp()
 {
+    glDeleteVertexArrays(1, &VAO );
+    glDeleteBuffers(1,&VBO);
     SDL_DestroyWindow(GraphicsApplicationWindow);
 
     SDL_Quit();

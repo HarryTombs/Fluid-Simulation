@@ -5,9 +5,10 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
-class FluidSim 
+class FluidSim
 {
 public:
+    FluidSim();
     int width, height;
 
     PingPongBuffer velocity;
@@ -15,8 +16,8 @@ public:
     Framebuffer divergence;
     PingPongBuffer pressure;
 
-    Shader advectShader ;
-    Shader displayShader;
+    Shader* advectShader;
+    Shader* displayShader;
 
     void init(int w, int h);
     void update(float dt);
