@@ -3,15 +3,20 @@ out vec4 FragColor;
 
 in vec2 TexCoords;
 
-uniform sampler2D uVelocity;   // the velocity field
-uniform sampler2D uSource;     // the thing we're moving (velocity or dye)
-uniform float dt;              // timestep
-uniform vec2 texelSize;        // 1.0 / resolution
+uniform vec2 mousePos;
+
+layout (location=0)out vec4 ClickPos;
 
 void main()
 {
-    vec2 vel = texture(uVelocity, TexCoords).xy;
-    vec2 backPos = TexCoords - dt * vel * texelSize;
-
-    FragColor = texture(uSource, backPos);
+    float dist = distance(TexCoords, mousePos);
+    if (dist < 0.01)
+    {
+        ClickPos = vec4(1.0,1.0, 1.0, 1.0); 
+    }
+    else
+    {
+        ClickPos = vec4(0.05,0.15, 0.2, 1.0); 
+    }
+        
 }

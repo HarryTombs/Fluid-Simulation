@@ -3,10 +3,10 @@
 in vec2 TexCoords;
 out vec4 FragColor;
 
-uniform sampler2D uTexture;
+uniform sampler2D ClickPos;
 
 void main()
 {
-    vec3 color = texture(uTexture, TexCoords).rgb;
-    FragColor = vec4(color, 1.0);
+    vec3 color = texture(ClickPos, TexCoords).rgb;
+    FragColor = vec4(color,1.0);
 }

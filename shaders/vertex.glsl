@@ -2,7 +2,6 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTex;
 
-out vec4 gl_Position;
 out vec2 TexCoords;
 
 void main()

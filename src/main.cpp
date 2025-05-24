@@ -2,13 +2,11 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
+#include <glm/glm.hpp>
 #include "SDLWindow.h"
 #include "Shaders.h"
 #include "Framebuffer.h"
 #include "FluidSim.h"
-
-
-
 
 int ScreenHeight = 640;
 int ScreenWidth = 480;
@@ -16,193 +14,204 @@ SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
+Framebuffer dyeFBO;
+
+float glX =  - 1.0f;
+float glY = 1.0f;
+
 Uint64 NOW = SDL_GetPerformanceCounter();
 Uint64 LAST = 0;
 double deltaTime = 0;
 
-FluidSim sim;
-
-float verticies[] = 
-{
-        1.0f,  1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-       -1.0f,  1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f, 
-       -1.0f, -1.0f, 0.0f, 
-       -1.0f,  1.0f, 0.0f   
+float verticies[] = {
+    1.0f,  1.0f, 0.0f,   1.0f, 1.0f,
+    1.0f, -1.0f, 0.0f,   1.0f, 0.0f,
+   -1.0f,  1.0f, 0.0f,   0.0f, 1.0f,
+    1.0f, -1.0f, 0.0f,   1.0f, 0.0f,
+   -1.0f, -1.0f, 0.0f,   0.0f, 0.0f,
+   -1.0f,  1.0f, 0.0f,   0.0f, 1.0f
 };
-
 
 unsigned int VBO;
 unsigned int VAO;
 
-Framebuffer dyeFBO;
-
 Shader* finalDraw = nullptr;
 Shader* OtherDraw = nullptr;
-// Shader* advectShader = nullptr;
-// Shader* addForce = nullptr;
-// Shader* divergence = nullptr;
-// Shader* jacobiIteration = nullptr;
-// Shader* subtract = nullptr;
 
+void CheckSDLError(const std::string& message) {
+    const char* error = SDL_GetError();
+    if (*error != '\0') {
+        std::cerr << "SDL Error (" << message << "): " << error << std::endl;
+        SDL_ClearError();
+        exit(1);
+    }
+}
 
-void GetOpenGLVersionInfo(){
+void CheckGLError(const std::string& message) {
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "OpenGL Error (" << message << "): " << error << std::endl;
+        exit(1);
+    }
+}
+
+void GetOpenGLVersionInfo() {
     std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
     std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
     std::cout << "Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 }
 
-
-void InitialiseProgram()
-{
-    if(SDL_Init(SDL_INIT_VIDEO) < 0){
-        std::cout << "Could not initialise Video Subsystem" << std::endl; 
+void InitialiseProgram() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "Could not initialize SDL Video Subsystem: " << SDL_GetError() << std::endl;
         exit(1);
     }
+    CheckSDLError("SDL_Init");
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);    
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    GraphicsApplicationWindow = SDL_CreateWindow("GLWindow",0,0,ScreenHeight,ScreenWidth,SDL_WINDOW_OPENGL);
-
-    if(GraphicsApplicationWindow == nullptr)
-    {
-        std::cout << "SDL_Window Was not created" << std::endl;
+    GraphicsApplicationWindow = SDL_CreateWindow("GLWindow", 0, 0, ScreenHeight, ScreenWidth, SDL_WINDOW_OPENGL);
+    if (GraphicsApplicationWindow == nullptr) {
+        std::cerr << "SDL_Window was not created: " << SDL_GetError() << std::endl;
         exit(1);
     }
+    CheckSDLError("SDL_CreateWindow");
 
     OpenGlConext = SDL_GL_CreateContext(GraphicsApplicationWindow);
-
-    if(OpenGlConext == nullptr)
-    {
-        std::cout << "OpenGL Context Was not created" << std::endl;
+    if (OpenGlConext == nullptr) {
+        std::cerr << "OpenGL Context was not created: " << SDL_GetError() << std::endl;
         exit(1);
     }
+    CheckSDLError("SDL_GL_CreateContext");
 
-    glewExperimental=true;
+    glewExperimental = true;
     GLenum err = glewInit();
-    if (err!=GLEW_OK) 
-    {
-        std::cout << "Glew init Failed: " << glewGetErrorString(err) << std::endl;
+    if (err != GLEW_OK) {
+        std::cerr << "GLEW initialization failed: " << glewGetErrorString(err) << std::endl;
         exit(1);
     }
+    CheckGLError("glewInit");
+
     GetOpenGLVersionInfo();
     std::cout << "OpenGL initialized successfully!" << std::endl;
 
-    sim.init(ScreenHeight,ScreenWidth);
+    finalDraw = new Shader("../shaders/vertex.glsl", "../shaders/fragment.glsl");
+    if (!finalDraw) {
+        std::cerr << "Failed to create finalDraw shader!" << std::endl;
+        exit(1);
+    }
+    CheckGLError("Shader creation (finalDraw)");
 
-    
+    OtherDraw = new Shader("../shaders/vertex.glsl", "../shaders/advectionFragment.glsl");
+    if (!OtherDraw) {
+        std::cerr << "Failed to create OtherDraw shader!" << std::endl;
+        exit(1);
+    }
+    CheckGLError("Shader creation (OtherDraw)");
 
-    // finalDraw = new Shader("../shaders/vertex.glsl","../shaders/fragment.glsl");
-    // OtherDraw = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
+    glGenBuffers(1, &VBO);
+    CheckGLError("glGenBuffers");
 
-    // advectShader = new Shader("../shaders/vertex.glsl","../shaders/advectionFragment.glsl");
-    // addForce = new Shader("../shaders/vertex.glsl","../shaders/addForceFragment.glsl");
-    // divergence = new Shader("../shaders/vertex.glsl","../shaders/diverganceFragment.glsl");
-    // jacobiIteration = new Shader("../shaders/vertex.glsl","../shaders/jacobiIterationFragment.glsl");
-    // subtract = new Shader("../shaders/vertex.glsl","../shaders/subtractFragment.glsl");
-    glGenBuffers(1,&VBO);
     glGenVertexArrays(1, &VAO);
+    CheckGLError("glGenVertexArrays");
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
+    CheckGLError("Buffer setup");
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0); 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    CheckGLError("VertexAttribPointer (position)");
 
-    // dyeFBO.create(ScreenWidth,ScreenHeight,GL_RGBA16F);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    CheckGLError("VertexAttribPointer (texture)");
 
+    dyeFBO.create(ScreenHeight, ScreenWidth, GL_RGBA16F, true);
 }
 
-void Input()
-{
-    SDL_Event e; 
-    while(SDL_PollEvent(&e) !=0)
-    {
-        if(e.type == SDL_QUIT)
-        {
+void Input() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e) != 0) {
+        if (e.type == SDL_QUIT) {
             std::cout << "Bye!" << std::endl;
             gQuit = true;
+        }
+        if (e.type == SDL_MOUSEBUTTONDOWN) {
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                glX = (e.motion.x / (float)ScreenHeight);
+                glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
+            }
+        }
+        if (e.type == SDL_MOUSEMOTION) {
+            if (e.motion.state & SDL_BUTTON_LMASK) {
+                glX = (e.motion.x / (float)ScreenHeight);
+                glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
+            }
         }
     }
 }
 
-void RenderQuad()
-{
-    glBindVertexArray(VAO); 
+void RenderQuad() {
+    glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    SDL_GL_SwapWindow(GraphicsApplicationWindow);
+    CheckGLError("RenderQuad");
 }
 
-
-void MainLoop()
-{
-    while(!gQuit){
+void MainLoop() {
+    while (!gQuit) {
         Input();
 
         LAST = NOW;
         NOW = SDL_GetPerformanceCounter();
 
-        deltaTime = (double)((NOW-LAST)*1000) / SDL_GetPerformanceFrequency();
+        deltaTime = (double)((NOW - LAST) * 1000) / SDL_GetPerformanceFrequency();
         deltaTime /= 1000.0;
 
-        sim.update(deltaTime);
+        dyeFBO.bind();
+        CheckGLError("Framebuffer bind");
 
-        sim.velocity.write();
-        glClearColor(1.0f, 0.0f, 0.0f, 0.0f); // Constant rightward velocity
-        glClear(GL_COLOR_BUFFER_BIT);
-        sim.velocity.swap();
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        sim.dye.write();
-        glClearColor(0.9f,0.1f,0.f,1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        sim.dye.swap();
+        OtherDraw->use();
+        OtherDraw->setVec2("mousePos", glm::vec2(glX, glY));
+        RenderQuad();
 
-       
-        // per frame 
-        // 1 advection of dye and velocity, out put new velocity 
-        // calculate external force (mouse input) apply to velocity, output new
-        // measure the divergance, (difference of inflow and outflow) output divergance
-        // PER ITERATION, "smooth" the divergance till its a normal amount 20-40 times per cell
-        // correct velocity based on smoothed divergance
-        // render the dye to screen
-        // this is all in glsl
+        dyeFBO.unbind();
+        CheckGLError("Framebuffer unbind");
 
-        // you need FBOs to save them all to like in deffered shading
-        // Make an FBO class and a fluid class to do that
+        glViewport(0, 0, ScreenHeight, ScreenWidth);
 
-        sim.render();
+        glBindTexture(GL_TEXTURE_2D, dyeFBO.getTexture());
 
+        glClearColor(0.0f, 0.7f, 0.7f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        CheckGLError("MainLoop (clear)");
 
-        // finalDraw->use();
-
+        finalDraw->use();
+        RenderQuad();
+        SDL_GL_SwapWindow(GraphicsApplicationWindow);
 
     }
 }
 
-
-void CleanUp()
-{
-    glDeleteVertexArrays(1, &VAO );
-    glDeleteBuffers(1,&VBO);
+void CleanUp() {
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
     SDL_DestroyWindow(GraphicsApplicationWindow);
-
     SDL_Quit();
 }
 
-
-int main(){
-
+int main() {
     InitialiseProgram();
-
     MainLoop();
-
     CleanUp();
     return 0;
 }

@@ -11,4 +11,6 @@ void MainLoop();
 void CleanUp();
 
 
+
+
 #endif // SDLWINDOW_H

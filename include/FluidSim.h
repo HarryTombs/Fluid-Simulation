@@ -4,6 +4,7 @@
 #include "Shaders.h"
 #include <GL/glew.h>
 #include <GL/glut.h>
+#include <memory>
 
 class FluidSim
 {
@@ -16,8 +17,8 @@ public:
     Framebuffer divergence;
     PingPongBuffer pressure;
 
-    Shader* advectShader;
-    Shader* displayShader;
+    std::unique_ptr<Shader> advectShader;
+    std::unique_ptr<Shader> displayShader;
 
     void init(int w, int h);
     void update(float dt);

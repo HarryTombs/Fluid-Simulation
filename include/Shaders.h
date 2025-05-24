@@ -88,6 +88,10 @@ public:
     {
         glUniform2fv(glGetUniformLocation(ID,name.c_str()), 1,&value[0]);
     };
+    ~Shader()
+    {
+        glDeleteProgram(ID);
+    };
 private:
 void checkCompileErrors(unsigned int shader, std::string type)
 {
