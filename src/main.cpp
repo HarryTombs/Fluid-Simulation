@@ -216,6 +216,7 @@ void Input() {
             if (e.button.button == SDL_BUTTON_LEFT) {
                 float glX = (e.motion.x / (float)ScreenHeight);
                 float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
+                renderToFramebuffer(fbo1, OtherDraw, glX, glY);
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
