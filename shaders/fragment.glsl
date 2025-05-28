@@ -1,12 +1,11 @@
 #version 330 core
 
-in vec2 TexCoords;
-out vec4 FragColor;
-
-uniform sampler2D ClickPos;
+uniform sampler2D iChannel0;
+uniform vec2 iResolution;
 
 void main()
 {
-    vec3 color = texture(ClickPos, TexCoords).rgb;
-    FragColor = vec4(color,1.0);
+    vec2 coord = gl_FragCoord.xy;
+    vec4 data = texture(iChannel0, coord / iResolution);
+    gl_FragColor = vec4(data.w);
 }

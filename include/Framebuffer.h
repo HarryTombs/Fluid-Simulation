@@ -18,7 +18,8 @@ public:
 
     void resize(int newWidth, int newHeight, GLenum format = GL_RGBA16F, bool useDepth = false);
 
-    GLuint getTexture() const { return texture; }
+    GLuint getTexture() const { return texture; };
+    GLuint getFBO() const {return fbo; };
 
 };
 

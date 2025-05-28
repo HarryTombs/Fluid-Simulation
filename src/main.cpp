@@ -14,7 +14,10 @@ SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
-Framebuffer dyeFBO;
+Framebuffer FboA;
+Framebuffer FboB;
+
+bool ping;
 
 float glX =  - 1.0f;
 float glY = 1.0f;
@@ -133,7 +136,10 @@ void InitialiseProgram() {
     glEnableVertexAttribArray(1);
     CheckGLError("VertexAttribPointer (texture)");
 
-    dyeFBO.create(ScreenHeight, ScreenWidth, GL_RGBA16F, true);
+    FboA.create(ScreenHeight, ScreenWidth, GL_RGBA32F,true);
+    FboB.create(ScreenHeight,ScreenWidth,GL_RGBA32F,true);
+
+    ping = true;
 }
 
 void Input() {
@@ -144,6 +150,7 @@ void Input() {
             gQuit = true;
         }
         if (e.type == SDL_MOUSEBUTTONDOWN) {
+
             if (e.button.button == SDL_BUTTON_LEFT) {
                 glX = (e.motion.x / (float)ScreenHeight);
                 glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
@@ -174,30 +181,54 @@ void MainLoop() {
         deltaTime = (double)((NOW - LAST) * 1000) / SDL_GetPerformanceFrequency();
         deltaTime /= 1000.0;
 
-        dyeFBO.bind();
+        // SIM PASS
+
+        GLuint readTex = ping ? FboA.getTexture() : FboB.getTexture();
+        GLuint writeFBO = ping ? FboB.getFBO() : FboA.getFBO();
+
+        glBindFramebuffer(GL_FRAMEBUFFER,writeFBO);
+        glViewport(0,0,ScreenHeight,ScreenWidth);
         CheckGLError("Framebuffer bind");
-
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         OtherDraw->use();
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, readTex);
         OtherDraw->setVec2("mousePos", glm::vec2(glX, glY));
+        OtherDraw->setVec2("iResolution", glm::vec2(ScreenHeight,ScreenWidth));
+        OtherDraw->setInt("iChannel0",0);
+        OtherDraw->setFloat("iTime", deltaTime);
+        OtherDraw->use();
         RenderQuad();
 
-        dyeFBO.unbind();
+        ping = !ping;
+
+        // glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         CheckGLError("Framebuffer unbind");
+
+
 
         glViewport(0, 0, ScreenHeight, ScreenWidth);
 
-        glBindTexture(GL_TEXTURE_2D, dyeFBO.getTexture());
-
-        glClearColor(0.0f, 0.7f, 0.7f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        CheckGLError("MainLoop (clear)");
-
         finalDraw->use();
+
+        GLuint currentTex = ping ? FboB.getTexture() : FboA.getTexture();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, currentTex);
+
+        finalDraw->setFloat("iChannel0", 0);
+        finalDraw->setVec2("iResolution",glm::vec2(ScreenHeight,ScreenWidth));
+        
+        // glClearColor(0.0f, 0.7f, 0.7f, 1.0f);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // CheckGLError("MainLoop (clear)");
+
         RenderQuad();
         SDL_GL_SwapWindow(GraphicsApplicationWindow);
+
 
     }
 }
