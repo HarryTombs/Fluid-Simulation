@@ -14,8 +14,12 @@ SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
-Framebuffer FboA;
-Framebuffer FboB;
+
+unsigned int fbo1;
+unsigned int fbo2;
+
+unsigned int fbo1Texture;
+unsigned int fbo2Texture;
 
 bool ping;
 
@@ -40,6 +44,7 @@ unsigned int VAO;
 
 Shader* finalDraw = nullptr;
 Shader* OtherDraw = nullptr;
+Shader* FrameBufferDraw = nullptr;
 
 void CheckSDLError(const std::string& message) {
     const char* error = SDL_GetError();
@@ -92,7 +97,7 @@ void InitialiseProgram() {
     }
     CheckSDLError("SDL_GL_CreateContext");
 
-    glewExperimental = true;
+    glewExperimental = GL_TRUE;
     GLenum err = glewInit();
     if (err != GLEW_OK) {
         std::cerr << "GLEW initialization failed: " << glewGetErrorString(err) << std::endl;
@@ -110,12 +115,19 @@ void InitialiseProgram() {
     }
     CheckGLError("Shader creation (finalDraw)");
 
-    OtherDraw = new Shader("../shaders/vertex.glsl", "../shaders/advectionFragment.glsl");
+    OtherDraw = new Shader("../shaders/framebufferVertex.glsl", "../shaders/advectionFragment.glsl");
     if (!OtherDraw) {
         std::cerr << "Failed to create OtherDraw shader!" << std::endl;
         exit(1);
     }
     CheckGLError("Shader creation (OtherDraw)");
+
+    FrameBufferDraw = new Shader("../shaders/framebufferVertex.glsl", "../shaders/framebufferFragment.glsl");
+    if (!FrameBufferDraw) {
+        std::cerr << "Failed to create FrameBufferDraw shader!" << std::endl;
+        exit(1);
+    }
+    CheckGLError("Shader creation (FrameBufferDraw)");
 
     glGenBuffers(1, &VBO);
     CheckGLError("glGenBuffers");
@@ -136,8 +148,58 @@ void InitialiseProgram() {
     glEnableVertexAttribArray(1);
     CheckGLError("VertexAttribPointer (texture)");
 
-    FboA.create(ScreenHeight, ScreenWidth, GL_RGBA32F,true);
-    FboB.create(ScreenHeight,ScreenWidth,GL_RGBA32F,true);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glGenFramebuffers(1, &fbo1);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+
+    glGenTextures(1, &fbo1Texture);
+    glBindTexture(GL_TEXTURE_2D, fbo1Texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ScreenHeight, ScreenWidth, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo1Texture, 0);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0, 0, ScreenHeight, ScreenWidth);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Framebuffer 1 not complete! Status: " << status << std::endl;
+        exit(1);
+    }
+    CheckGLError("Framebuffer 1 setup");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CheckGLError("glGenFramebuffers");
+
+    // glGenFramebuffers(1, &fbo2);
+    // glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
+    // glGenTextures(1, &fbo2Texture);
+    // glBindTexture(GL_TEXTURE_2D, fbo2Texture);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ScreenHeight, ScreenWidth, 0, GL_RGBA, GL_FLOAT, nullptr);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);   
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo2Texture, 0);
+
+    // glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glViewport(0, 0, ScreenHeight, ScreenWidth);
+    // status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    // if (status != GL_FRAMEBUFFER_COMPLETE) {
+    //     std::cerr << "Framebuffer 2 not complete! Status: " << status << std::endl;
+    //     exit(1);
+    // }
+    // CheckGLError("Framebuffer 2 setup");
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // CheckGLError("glGenFramebuffers");
+
 
     ping = true;
 }
@@ -152,17 +214,37 @@ void Input() {
         if (e.type == SDL_MOUSEBUTTONDOWN) {
 
             if (e.button.button == SDL_BUTTON_LEFT) {
-                glX = (e.motion.x / (float)ScreenHeight);
-                glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
+                float glX = (e.motion.x / (float)ScreenHeight);
+                float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
             if (e.motion.state & SDL_BUTTON_LMASK) {
-                glX = (e.motion.x / (float)ScreenHeight);
-                glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
+                float glX = (e.motion.x / (float)ScreenHeight);
+                float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
+                renderToFramebuffer(fbo1, OtherDraw, glX, glY);
+                // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
             }
         }
     }
+}
+
+void renderToFramebuffer(int Framebuffer, Shader* shader, float glX, float glY) {
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+    CheckGLError("glBindFramebuffer");
+
+    glViewport(0, 0, ScreenHeight, ScreenWidth);
+    CheckGLError("glViewport");
+
+    shader->use();
+    CheckGLError("Shader use");
+
+    shader->setVec2("mousePos", glm::vec2(glX, glY));
+    CheckGLError("Set mouse position");
+
+    RenderQuad();
+    CheckGLError("RenderQuad");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void RenderQuad() {
@@ -181,50 +263,19 @@ void MainLoop() {
         deltaTime = (double)((NOW - LAST) * 1000) / SDL_GetPerformanceFrequency();
         deltaTime /= 1000.0;
 
-        // SIM PASS
-
-        GLuint readTex = ping ? FboA.getTexture() : FboB.getTexture();
-        GLuint writeFBO = ping ? FboB.getFBO() : FboA.getFBO();
-
-        glBindFramebuffer(GL_FRAMEBUFFER,writeFBO);
-        glViewport(0,0,ScreenHeight,ScreenWidth);
-        CheckGLError("Framebuffer bind");
-        OtherDraw->use();
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, readTex);
-        OtherDraw->setVec2("mousePos", glm::vec2(glX, glY));
-        OtherDraw->setVec2("iResolution", glm::vec2(ScreenHeight,ScreenWidth));
-        OtherDraw->setInt("iChannel0",0);
-        OtherDraw->setFloat("iTime", deltaTime);
-        OtherDraw->use();
-        RenderQuad();
+        // std::cout << "Delta Time: " << deltaTime << " seconds" << std::endl;
 
         ping = !ping;
 
-        // glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // std::cout << "Ping: " << ping << std::endl;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        CheckGLError("Framebuffer unbind");
-
-
+        glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glViewport(0, 0, ScreenHeight, ScreenWidth);
 
         finalDraw->use();
 
-        GLuint currentTex = ping ? FboB.getTexture() : FboA.getTexture();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, currentTex);
-
-        finalDraw->setFloat("iChannel0", 0);
-        finalDraw->setVec2("iResolution",glm::vec2(ScreenHeight,ScreenWidth));
-        
-        // glClearColor(0.0f, 0.7f, 0.7f, 1.0f);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // CheckGLError("MainLoop (clear)");
 
         RenderQuad();
         SDL_GL_SwapWindow(GraphicsApplicationWindow);
