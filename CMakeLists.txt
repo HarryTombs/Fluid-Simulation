@@ -15,6 +15,7 @@ target_link_libraries(${TargetName} ${SDL2_LIBRARIES} )
 target_sources(${TargetName} PRIVATE ${PROJECT_SOURCE_DIR}/src/main.cpp
 
 			${PROJECT_SOURCE_DIR}/include/SDLWindow.h
+			${PROJECT_SOURCE_DIR}/include/ShaderUtils.h
 			${PROJECT_SOURCE_DIR}/include/Shaders.h)
 
 add_custom_target(${TargetName}CopyShaders ALL
