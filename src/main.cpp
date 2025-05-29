@@ -164,7 +164,7 @@ void Input() {
                 float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
                 // renderToFramebuffer(writeFbo, OtherDraw, glX, glY);
                 // CheckGLError("Mouse motion rendering");
-                // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
+                std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
             }
         }
     }

@@ -4,5 +4,5 @@ out vec4 color;
 uniform sampler2D tex;
 void main() {
     vec4 data = texture(tex, uv);
-    color = vec4(data.xyz, 1.0);
-}
+    color = vec4(data.bbb, 1.0);
+    }

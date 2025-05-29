@@ -1,14 +1,20 @@
 #version 430
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 1, local_size_y = 1) in;
 
 layout(rgba32f, binding = 0) uniform readonly image2D inputTex;
 layout(rgba32f, binding = 1) uniform writeonly image2D outputTex;
 
 void main() {
-    vec4 value = vec4(0.0,0.0,0.0,1.0);
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
 
-    value.x = float(pos.x)/(gl_NumWorkGroups.x);
-    value.y = float(pos.y)/(gl_NumWorkGroups.y);
-    imageStore(outputTex, pos, value); // write green
-}
+    vec4 centre = imageLoad(inputTex, pos);
+    vec4 up = imageLoad(inputTex, ivec2(pos + vec2(0,1)));
+    vec4 down = imageLoad(inputTex, ivec2(pos + vec2(0,-1)));
+    vec4 left = imageLoad(inputTex, ivec2(pos + vec2(-1,0)));
+    vec4 right = imageLoad(inputTex, ivec2(pos + vec2(1,0)));
+
+    vec4 average = (up + down + left + right) / 4.0;
+    vec4 result = mix(centre,average,0.25);
+
+    imageStore(outputTex, pos, result); 
+}   
