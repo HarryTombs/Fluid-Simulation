@@ -13,11 +13,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(${TargetName} ${SDL2_LIBRARIES} )
 
 target_sources(${TargetName} PRIVATE ${PROJECT_SOURCE_DIR}/src/main.cpp
-			${PROJECT_SOURCE_DIR}/src/Framebuffer.cpp
-			${PROJECT_SOURCE_DIR}/src/FluidSim.cpp
+
 			${PROJECT_SOURCE_DIR}/include/SDLWindow.h
-			${PROJECT_SOURCE_DIR}/include/Framebuffer.h
-			${PROJECT_SOURCE_DIR}/include/FluidSim.h
 			${PROJECT_SOURCE_DIR}/include/Shaders.h)
 
 add_custom_target(${TargetName}CopyShaders ALL

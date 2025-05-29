@@ -5,14 +5,15 @@
 #include <glm/glm.hpp>
 #include "SDLWindow.h"
 #include "Shaders.h"
-#include "Framebuffer.h"
-#include "FluidSim.h"
 
-int ScreenHeight = 640;
-int ScreenWidth = 480;
+int ScreenHeight = 512;
+int ScreenWidth = 512;
 SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
+
+GLuint texA, texB;
+GLuint computeShader, renderShader, quadVAO;
 
 
 unsigned int fbo1;
@@ -22,6 +23,10 @@ unsigned int fbo1Texture;
 unsigned int fbo2Texture;
 
 bool ping;
+
+unsigned int readTex;
+unsigned int readFbo;
+unsigned int writeFbo;
 
 float glX =  - 1.0f;
 float glY = 1.0f;
@@ -157,8 +162,8 @@ void InitialiseProgram() {
     glGenTextures(1, &fbo1Texture);
     glBindTexture(GL_TEXTURE_2D, fbo1Texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ScreenHeight, ScreenWidth, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -176,31 +181,34 @@ void InitialiseProgram() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     CheckGLError("glGenFramebuffers");
 
-    // glGenFramebuffers(1, &fbo2);
-    // glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+    // Create second framebuffer
 
-    // glGenTextures(1, &fbo2Texture);
-    // glBindTexture(GL_TEXTURE_2D, fbo2Texture);
-    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ScreenHeight, ScreenWidth, 0, GL_RGBA, GL_FLOAT, nullptr);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);   
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo2Texture, 0);
+    glGenFramebuffers(1, &fbo2);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
 
-    // glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // glViewport(0, 0, ScreenHeight, ScreenWidth);
-    // status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    // if (status != GL_FRAMEBUFFER_COMPLETE) {
-    //     std::cerr << "Framebuffer 2 not complete! Status: " << status << std::endl;
-    //     exit(1);
-    // }
-    // CheckGLError("Framebuffer 2 setup");
-    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // CheckGLError("glGenFramebuffers");
+    glGenTextures(1, &fbo2Texture);
+    glBindTexture(GL_TEXTURE_2D, fbo2Texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ScreenHeight, ScreenWidth, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);   
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo2Texture, 0);
 
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0, 0, ScreenHeight, ScreenWidth);
+    GLenum status2 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status2 != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Framebuffer 2 not complete! Status: " << status2 << std::endl;
+        exit(1);
+    }
+    CheckGLError("Framebuffer 2 setup");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CheckGLError("glGenFramebuffers");
 
+    readTex = fbo1Texture;
+    writeFbo = fbo2;
     ping = true;
 }
 
@@ -216,14 +224,15 @@ void Input() {
             if (e.button.button == SDL_BUTTON_LEFT) {
                 float glX = (e.motion.x / (float)ScreenHeight);
                 float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
-                renderToFramebuffer(fbo1, OtherDraw, glX, glY);
+                renderToFramebuffer(writeFbo, OtherDraw, glX, glY);
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
             if (e.motion.state & SDL_BUTTON_LMASK) {
                 float glX = (e.motion.x / (float)ScreenHeight);
                 float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
-                renderToFramebuffer(fbo1, OtherDraw, glX, glY);
+                renderToFramebuffer(writeFbo, OtherDraw, glX, glY);
+                CheckGLError("Mouse motion rendering");
                 // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
             }
         }
@@ -233,6 +242,7 @@ void Input() {
 void renderToFramebuffer(int Framebuffer, Shader* shader, float glX, float glY) {
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
     CheckGLError("glBindFramebuffer");
+    
 
     glViewport(0, 0, ScreenHeight, ScreenWidth);
     CheckGLError("glViewport");
@@ -242,9 +252,8 @@ void renderToFramebuffer(int Framebuffer, Shader* shader, float glX, float glY) 
 
     shader->setVec2("mousePos", glm::vec2(glX, glY));
     CheckGLError("Set mouse position");
+    shader->setInt("previousFrame", readTex);
 
-    RenderQuad();
-    CheckGLError("RenderQuad");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -252,6 +261,8 @@ void RenderQuad() {
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     CheckGLError("RenderQuad");
+    SDL_GL_SwapWindow(GraphicsApplicationWindow);
+
 }
 
 void MainLoop() {
@@ -266,20 +277,51 @@ void MainLoop() {
 
         // std::cout << "Delta Time: " << deltaTime << " seconds" << std::endl;
 
+        
+
+        if (ping)
+        {
+            readTex = fbo1Texture;
+            readFbo = fbo1;
+            writeFbo = fbo2;
+            std::cout << "Using FBO 1" << std::endl;
+        }
+        else 
+        {
+            readTex = fbo2Texture;
+            readFbo = fbo2;
+            writeFbo = fbo1;
+            std::cout << "Using FBO 2" << std::endl;
+        }
+
+
         ping = !ping;
 
         // std::cout << "Ping: " << ping << std::endl;
+        // std::cout << "FBO: " << writeFbo << std::endl;
+        // std::cout << "Tex: " << readTex << std::endl;
 
         glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glViewport(0, 0, ScreenHeight, ScreenWidth);
+        
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, readFbo);
+        glClearColor(float(ping), 0.0f, 0.0f, 1.0f);
+        std::cout <<"Ping: " << ping << std::endl;
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, readTex);
+
+        OtherDraw->use();
+        OtherDraw->setInt("previousFrame", fbo2Texture);
+        RenderQuad();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0 );
+
 
         finalDraw->use();
-
-
+        finalDraw->setInt("previousFrame", readTex);
         RenderQuad();
-        SDL_GL_SwapWindow(GraphicsApplicationWindow);
 
 
     }
