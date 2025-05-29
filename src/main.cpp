@@ -8,8 +8,8 @@
 #include "Shaders.h"
 #include "ShaderUtils.h"
 
-int ScreenHeight = 512;
-int ScreenWidth = 512;
+int ScreenHeight = 1024;
+int ScreenWidth = 1024;
 SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
@@ -19,8 +19,8 @@ GLuint computeShader, renderShader, quadVAO;
 
 bool ping;
 
-float glX =  - 1.0f;
-float glY = 1.0f;
+float glX = - 1.0f;
+float glY = - 1.0f;
 
 Uint64 NOW = SDL_GetPerformanceCounter();
 Uint64 LAST = 0;
@@ -153,18 +153,15 @@ void Input() {
         if (e.type == SDL_MOUSEBUTTONDOWN) {
 
             if (e.button.button == SDL_BUTTON_LEFT) {
-                float glX = (e.motion.x / (float)ScreenHeight);
-                float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);  
-                // renderToFramebuffer(writeFbo, OtherDraw, glX, glY);
+                glX = ( e.motion.x); 
+                glY = ((ScreenHeight - e.motion.y));  
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
             if (e.motion.state & SDL_BUTTON_LMASK) {
-                float glX = (e.motion.x / (float)ScreenHeight);
-                float glY = (e.motion.y/ ((float)ScreenWidth)*-1.0f + 1.0f);
-                // renderToFramebuffer(writeFbo, OtherDraw, glX, glY);
-                // CheckGLError("Mouse motion rendering");
-                std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
+                glX = (e.motion.x);  
+                glY = ((ScreenHeight - e.motion.y)); 
+                // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
             }
         }
     }
@@ -193,13 +190,17 @@ void MainLoop() {
         glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
+        if (mouseLoc != -1) {
+            glUniform2i(mouseLoc, glX, glY);
+        }
         CheckGLError("Compute Shader Dispatch");
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
         glBindTexture(GL_TEXTURE_2D, ping ? texB : texA);
 
-        glClearColor(0, 0, 0, 1);
+        glClearColor(0.5, 0.2, 0.1, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glBindVertexArray(VAO);
@@ -210,6 +211,8 @@ void MainLoop() {
         // std::cout << "Ping: " << ping << std::endl;
 
         ping = !ping;
+        glX = -1.0f; // Reset mouse position after rendering
+        glY = -1.0f;  // Reset mouse position after rendering
         
 
         // RenderQuad();

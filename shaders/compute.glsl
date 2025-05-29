@@ -4,6 +4,8 @@ layout(local_size_x = 1, local_size_y = 1) in;
 layout(rgba32f, binding = 0) uniform readonly image2D inputTex;
 layout(rgba32f, binding = 1) uniform writeonly image2D outputTex;
 
+uniform ivec2 mousePos; 
+
 void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
 
@@ -15,6 +17,14 @@ void main() {
 
     vec4 average = (up + down + left + right) / 4.0;
     vec4 result = mix(centre,average,0.25);
+
+    
+
+    int radius = 6;
+    if(mousePos.x >= 0 && distance(vec2(pos),vec2(mousePos)) < float(radius))
+    {
+        result = vec4(0.0,0.0,1.0,1.0);
+    }
 
     imageStore(outputTex, pos, result); 
 }   
