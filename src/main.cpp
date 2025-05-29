@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "SDLWindow.h"
-#include "Shaders.h"
 #include "ShaderUtils.h"
 
 int ScreenHeight = 1024;
