@@ -7,8 +7,8 @@
 #include "SDLWindow.h"
 #include "ShaderUtils.h"
 
-int ScreenHeight = 1024;
-int ScreenWidth = 1024;
+int ScreenHeight = 512;
+int ScreenWidth = 512;
 SDL_Window* GraphicsApplicationWindow = nullptr;
 SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
@@ -20,6 +20,7 @@ bool ping;
 
 float glX = - 1.0f;
 float glY = - 1.0f;
+bool mouseDown = false;
 
 Uint64 NOW = SDL_GetPerformanceCounter();
 Uint64 LAST = 0;
@@ -151,16 +152,24 @@ void Input() {
         }
         if (e.type == SDL_MOUSEBUTTONDOWN) {
 
-            if (e.button.button == SDL_BUTTON_LEFT) {
+            if (e.button.button == SDL_BUTTON_LEFT) 
+            {
+                mouseDown = true;
                 glX = ( e.motion.x); 
-                glY = ((ScreenHeight - e.motion.y));  
+                glY = ((ScreenHeight - e.motion.y));
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
             if (e.motion.state & SDL_BUTTON_LMASK) {
                 glX = (e.motion.x);  
                 glY = ((ScreenHeight - e.motion.y)); 
-                // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
+            }
+        }
+        if (e.type == SDL_MOUSEBUTTONUP) {
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                mouseDown = false;
+                glX = -1.0f; 
+                glY = -1.0f;  
             }
         }
     }
@@ -189,11 +198,18 @@ void MainLoop() {
         glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        CheckGLError("Compute Shader Dispatch");
+
         GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
         if (mouseLoc != -1) {
             glUniform2i(mouseLoc, glX, glY);
         }
-        CheckGLError("Compute Shader Dispatch");
+        CheckGLError("Uniform Mouse Position");
+        GLuint mousePress = glGetUniformLocation(computeShader, "mousePress");
+        if (mousePress != -1) {
+            glUniform1i(mousePress,mouseDown ? 1 : 0);
+        }
+        glUniform2i(glGetUniformLocation(computeShader, "Resolution"), ScreenWidth, ScreenHeight);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
@@ -210,9 +226,7 @@ void MainLoop() {
         // std::cout << "Ping: " << ping << std::endl;
 
         ping = !ping;
-        glX = -1.0f; // Reset mouse position after rendering
-        glY = -1.0f;  // Reset mouse position after rendering
-        
+
 
         // RenderQuad();
 
