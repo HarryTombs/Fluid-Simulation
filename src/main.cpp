@@ -90,7 +90,7 @@ void InitialiseProgram() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    GraphicsApplicationWindow = SDL_CreateWindow("GLWindow", 0, 0, ScreenHeight, ScreenWidth, SDL_WINDOW_OPENGL);
+    GraphicsApplicationWindow = SDL_CreateWindow("GLWindow", 0, 0, ScreenWidth, ScreenHeight, SDL_WINDOW_OPENGL);
     if (GraphicsApplicationWindow == nullptr) {
         std::cerr << "SDL_Window was not created: " << SDL_GetError() << std::endl;
         exit(1);
@@ -196,7 +196,7 @@ void MainLoop() {
         glUseProgram(computeShader);
         glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glDispatchCompute(ScreenWidth/16, ScreenHeight/16, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Compute Shader Dispatch");
 
@@ -210,12 +210,13 @@ void MainLoop() {
             glUniform1i(mousePress,mouseDown ? 1 : 0);
         }
         glUniform2i(glGetUniformLocation(computeShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // std::cout << "Resolution: " << ScreenWidth << "x" << ScreenHeight << std::endl;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
         glBindTexture(GL_TEXTURE_2D, ping ? texB : texA);
 
-        glClearColor(0.5, 0.2, 0.1, 1);
+        glClearColor(0.8, 0.4, 0.15, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glBindVertexArray(VAO);
