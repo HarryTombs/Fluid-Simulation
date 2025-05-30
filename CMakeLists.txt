@@ -17,12 +17,6 @@ target_sources(${TargetName} PRIVATE ${PROJECT_SOURCE_DIR}/src/main.cpp
 			${PROJECT_SOURCE_DIR}/include/SDLWindow.h
 			${PROJECT_SOURCE_DIR}/include/ShaderUtils.h)
 
-add_custom_target(${TargetName}CopyShaders ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-    $<TARGET_FILE_DIR:${TargetName}>/shaders
-)
-
 
 # Find and link GLEW
 find_package(GLEW REQUIRED)
@@ -36,3 +30,9 @@ target_link_libraries(${TargetName} ${GLUT_LIBRARIES})
 
 find_package(OpenGL REQUIRED)
 target_link_libraries(${TargetName}  ${OPENGL_LIBRARIES})
+
+
+add_custom_command(TARGET ${TargetName} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+            $<TARGET_FILE_DIR:${TargetName}>/shaders)
