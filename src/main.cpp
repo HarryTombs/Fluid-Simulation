@@ -67,8 +67,8 @@ void createTexture(GLuint& tex) {
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, ScreenWidth, ScreenHeight);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -194,9 +194,14 @@ void MainLoop() {
 
 
         glUseProgram(computeShader);
-        glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, ping ? texA : texB);
+
+        // Set sampler uniform
+        glUniform1i(glGetUniformLocation(computeShader, "inputTex"), 0);
+
+        // Still bind the output texture as image
         glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute(ScreenWidth/16, ScreenHeight/16, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Compute Shader Dispatch");
 
@@ -210,6 +215,8 @@ void MainLoop() {
             glUniform1i(mousePress,mouseDown ? 1 : 0);
         }
         glUniform2i(glGetUniformLocation(computeShader, "Resolution"), ScreenWidth, ScreenHeight);
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+
         // std::cout << "Resolution: " << ScreenWidth << "x" << ScreenHeight << std::endl;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

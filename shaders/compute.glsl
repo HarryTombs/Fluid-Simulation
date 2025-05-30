@@ -1,31 +1,36 @@
 #version 430
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(rgba32f, binding = 0) uniform readonly image2D inputTex;
+layout(binding = 0) uniform sampler2D inputTex;
 layout(rgba32f, binding = 1) uniform writeonly image2D outputTex;
 
 uniform ivec2 Resolution;
 uniform ivec2 mousePos; 
 uniform bool mousePress;
 
-vec4 Field(ivec2 pos) 
+vec2 normalizeCoords(ivec2 pos)
 {
-    pos = clamp(pos, ivec2(0), Resolution - ivec2(1));
-    vec2 vel = imageLoad(inputTex, pos).xy;
-    ivec2 advectPos = pos - ivec2(vel);
-    advectPos = clamp(advectPos, ivec2(0), Resolution - ivec2(1));
-    return imageLoad(inputTex, advectPos);
+    return (vec2(pos)+0.5) / vec2(Resolution);
+}
+
+vec4 Field(vec2 uv) 
+{
+    return texture(inputTex,uv);
 }
 
 void main() 
 {
-    ivec2 Me = ivec2(gl_GlobalInvocationID.xy);
-    vec4 Energy = Field(Me);
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv = normalizeCoords(pos);
 
-    vec4 pX = Field(Me + ivec2(1, 0));
-    vec4 nX = Field(Me - ivec2(1, 0));
-    vec4 pY = Field(Me + ivec2(0, 1));
-    vec4 nY = Field(Me - ivec2(0, 1));
+    vec4 Energy = Field(uv);
+
+    float offset = 1.0 / float(Resolution.x);
+
+    vec4 pX = Field(uv + vec2(offset, 0));
+    vec4 nX = Field(uv - vec2(offset, 0));
+    vec4 pY = Field(uv + vec2(0, offset));
+    vec4 nY = Field(uv - vec2(0, offset));
 
     // Rule 2: Disordered energy (blue) diffuses
     Energy.b = (pX.b + pY.b + nX.b + nY.b) / 4.0;
@@ -43,25 +48,24 @@ void main()
     Energy.y -= Energy.a / 300.0;
 
     // Mass conservation
-    Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) / 8.0;
+    Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) / 4.0;
 
-    if (Me.x < 10 || Me.y < 10 || Resolution.x - Me.x < 10 || Resolution.y - Me.y < 10) {
-        Energy.xy = vec2(0.0);
+    if (pos.x < 10 || pos.y < 10 || Resolution.x - pos.x < 10 || Resolution.y - pos.y < 10) {
+        Energy.xy *= vec2(0.0);
     }
 
 
 
     int radius = 6;
-    if (mousePress && distance(vec2(Me), vec2(mousePos)) < 10.0) {
+    if (mousePress && distance(vec2(pos), vec2(mousePos)) < 10.0) {
         Energy.a = 1.0; // inject mass
     }
 
     // Clamp velocity to prevent explosive growth
     Energy.xy = clamp(Energy.xy, vec2(-10.0), vec2(10.0));
 
-    // Clamp disorder and mass (blue and alpha)
-    Energy.b = clamp(Energy.b, 0.0, 1.0);
-    Energy.a = clamp(Energy.a, 0.0, 5.0);  // you can raise this if too weak
+    Energy.b = clamp(Energy.b, 0.0, 4.0);
+    Energy.a = clamp(Energy.a, 0.0, 4.0);
 
-    imageStore(outputTex, Me, Energy); 
+    imageStore(outputTex, pos, Energy); 
 }   
