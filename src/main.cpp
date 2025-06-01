@@ -217,25 +217,26 @@ void MainLoop() {
         
         GLint success = 0;
 
+        ping = !ping;
         
+        glUseProgram(advectShader);
+        glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
+        CheckGLError("Advect Shader Dispatch");
 
-        // glUseProgram(advectShader);
-        // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        // CheckGLError("Advect Shader Dispatch");
+        ping = !ping;
 
-        // ping = !ping;
-
-        // glUseProgram(diffuseShader);
-        // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        // CheckGLError("Diffuse Shader Dispatch");
-
-        // ping = !ping;
+        glUseProgram(diffuseShader);
+        glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        CheckGLError("Diffuse Shader Dispatch");
 
         // glUseProgram(computeShader);
         // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);

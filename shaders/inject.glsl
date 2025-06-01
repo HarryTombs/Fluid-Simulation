@@ -13,7 +13,6 @@ void main() {
 
     vec4 color = imageLoad(inputTex, pos);
 
-
     if (mousePress) 
     {
         vec2 mouseUV = mousePos / vec2(Resolution);
