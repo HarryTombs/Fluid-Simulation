@@ -15,6 +15,7 @@ bool gQuit = false;
 
 GLuint texA, texB;
 GLuint computeShader, renderShader, quadVAO;
+GLuint injectShader, advectShader, diffuseShader;
 
 bool ping;
 
@@ -138,6 +139,9 @@ void InitialiseProgram() {
 
     computeShader = loadComputeShader("../shaders/compute.glsl");
     renderShader = loadShaderProgram("../shaders/vertex.glsl", "../shaders/fragment.glsl");
+    advectShader = loadComputeShader("../shaders/advect.glsl");
+    injectShader = loadComputeShader("../shaders/inject.glsl");
+    diffuseShader = loadComputeShader("../shaders/diffuse.glsl");
 
     ping = true;
 
@@ -170,15 +174,25 @@ void Input() {
                 mouseDown = false;
                 glX = -1.0f; 
                 glY = -1.0f;  
+                
             }
         }
     }
 }
 
-void RenderQuad() {
-
-
+void setMouseUniform(GLuint shader)
+{
+    GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
+    if (mouseLoc != -1) {
+        glUniform2i(mouseLoc, glX, glY);
+    }
+    GLuint mousePress = glGetUniformLocation(computeShader, "mousePress");
+    if (mousePress != -1) {
+        glUniform1i(mousePress,mouseDown ? 1 : 0);
+    }
 }
+
+
 
 void MainLoop() {
     while (!gQuit) {
@@ -192,30 +206,54 @@ void MainLoop() {
 
         // std::cout << "Delta Time: " << deltaTime << " seconds" << std::endl;
 
-
-        glUseProgram(computeShader);
+        glUseProgram(injectShader);
         glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute(ScreenWidth/16, ScreenHeight/16, 1);
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        CheckGLError("Compute Shader Dispatch");
+        glUniform2i(glGetUniformLocation(injectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        setMouseUniform(injectShader);
+        CheckGLError("Inject Shader Dispatch");
+        
+        GLint success = 0;
 
-        GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
-        if (mouseLoc != -1) {
-            glUniform2i(mouseLoc, glX, glY);
-        }
-        CheckGLError("Uniform Mouse Position");
-        GLuint mousePress = glGetUniformLocation(computeShader, "mousePress");
-        if (mousePress != -1) {
-            glUniform1i(mousePress,mouseDown ? 1 : 0);
-        }
-        glUniform2i(glGetUniformLocation(computeShader, "Resolution"), ScreenWidth, ScreenHeight);
-        // std::cout << "Resolution: " << ScreenWidth << "x" << ScreenHeight << std::endl;
+        
+
+        // glUseProgram(advectShader);
+        // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Advect Shader Dispatch");
+
+        // ping = !ping;
+
+        // glUseProgram(diffuseShader);
+        // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Diffuse Shader Dispatch");
+
+        // ping = !ping;
+
+        // glUseProgram(computeShader);
+        // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glDispatchCompute(ScreenWidth/16, ScreenHeight/16, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Compute Shader Dispatch");
+        // setMouseUniform(computeShader);
+
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
         glBindTexture(GL_TEXTURE_2D, ping ? texB : texA);
-
+        glUniform1i(glGetUniformLocation(renderShader, "tex"), 0);
+        glUniform2i(glGetUniformLocation(renderShader, "Resolution"), ScreenWidth, ScreenHeight);
+        CheckGLError("Bind Texture");
         glClearColor(0.8, 0.4, 0.15, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -238,6 +276,13 @@ void MainLoop() {
 void CleanUp() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteTextures(1, &texA);
+    glDeleteTextures(1, &texB); 
+    glDeleteProgram(computeShader);
+    glDeleteProgram(renderShader);
+    glDeleteProgram(advectShader);
+    glDeleteProgram(injectShader);
+    glDeleteProgram(diffuseShader);
     SDL_GL_DeleteContext(OpenGlConext);
     SDL_DestroyWindow(GraphicsApplicationWindow);
     SDL_Quit();
