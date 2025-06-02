@@ -1,28 +1,28 @@
 #version 430
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(rgba32f, binding = 0) uniform readonly image2D inputTex;
-layout(rgba32f, binding = 1) uniform writeonly image2D outputTex;
+layout(rgba32f, binding = 0) uniform image2D outputTex;
 
 uniform ivec2 Resolution;
-uniform ivec2 mousePos; 
+uniform vec2 mousePos; 
 uniform bool mousePress;
+uniform vec2 mouseDelta;
 
 void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
 
-    vec4 color = imageLoad(inputTex, pos);
+
+
 
     if (mousePress) 
     {
-        vec2 mouseUV = mousePos / vec2(Resolution);
-        vec2 uv = vec2(pos) / vec2(Resolution);
-        float dist = length(uv - mouseUV);
-        if (dist < 0.05) 
-        {
-            color.xy += normalize(uv - mouseUV) * 0.5;
-            color.zw += vec2(0.0, 0.1);
-        }
+        vec2 fragcoord = vec2(pos) / vec2(Resolution);
+        float dist = distance(fragcoord,mousePos);
+        float influence = exp(-dist * 10000.0);
+
+        vec4 vel = imageLoad(outputTex, pos);
+        vel.xy += mouseDelta * influence * 10.0;
+        imageStore(outputTex, pos, vel);
     }
-    imageStore(outputTex, pos, color);
+
 }

@@ -83,6 +83,7 @@
         "valarray": "cpp",
         "variant": "cpp",
         "__nullptr": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "ios": "cpp"
     }
 }
