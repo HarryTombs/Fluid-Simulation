@@ -143,16 +143,16 @@ void InitialiseProgram()
     {
         for (int x = 0; x < ScreenWidth; ++x) 
         {
-            float vel[4] = {0.1f, 0.0f, 0.0f, 0.0f}; // constant x-velocity
+            float vel[4] = {0.1f, 0.1f, 0.0f, 0.0f}; // constant x-velocity
             glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, vel);
         }
     }
-    // CheckGLError("Initialize velocityA texture");
-    // glBindTexture(GL_TEXTURE_2D, densityA);
-    // int cx = ScreenWidth / 2;
-    // int cy = ScreenHeight / 2;
-    // float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    // glTexSubImage2D(GL_TEXTURE_2D, 0, cx, cy, 1, 1, GL_RGBA, GL_FLOAT, color);
+    CheckGLError("Initialize velocityA texture");
+    glBindTexture(GL_TEXTURE_2D, densityA);
+    int cx = ScreenWidth / 2;
+    int cy = ScreenHeight / 2;
+    float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glTexSubImage2D(GL_TEXTURE_2D, 0, cx, cy, 1, 1, GL_RGBA, GL_FLOAT, color);
 
     
 
@@ -272,10 +272,10 @@ void MainLoop() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glUseProgram(injectShader);
-        glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, ping ? densityB : densityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         
         glUniform2i(glGetUniformLocation(injectShader, "Resolution"), ScreenWidth, ScreenHeight);
-        setMouseUniform(injectShader);
 
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -297,6 +297,7 @@ void MainLoop() {
         
 
         // Density advection
+
         glUseProgram(advectShader);
 
         glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -309,10 +310,6 @@ void MainLoop() {
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Advect Shader Dispatch");
-
-        // Swap
-
-        ping = !ping;
         
         // glUseProgram(advectShader);
         // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -322,8 +319,6 @@ void MainLoop() {
         // glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
         // glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
         // CheckGLError("Advect Shader Dispatch");
-
-        // ping = !ping;
 
         // glUseProgram(diffuseShader);
         // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -350,7 +345,7 @@ void MainLoop() {
         SDL_GL_SwapWindow(GraphicsApplicationWindow);
         
 
-        // ping = !ping;
+        ping = !ping;
 
 
     }
