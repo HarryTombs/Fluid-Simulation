@@ -18,10 +18,12 @@ void main()
     float pY = imageLoad(pressureTexIn, pos + ivec2(0,1)).x;
     float nY = imageLoad(pressureTexIn, pos - ivec2(0,1)).x;
 
-    vec4 velocityImg = imageLoad(velocityTex,pos);
-    vec2 velocity = velocityImg.xy;
+    vec4 v = imageLoad(velocityTex,pos);
+    float dye = v.a;
+    vec2 velocity = v.xy;
     vec2 gradient = vec2(pX - nX, pY - nY) * 0.5;
 
     velocity -= gradient;
-    imageStore(outputTex,pos,vec4(velocity,0.0,1.0));
+
+    imageStore(outputTex,pos,vec4(velocity,0.0,dye));
 }

@@ -3,6 +3,7 @@ layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(rgba32f, binding = 0) uniform readonly image2D inputTex;
 layout(rgba32f, binding = 1) uniform writeonly image2D outputTex;
+layout(rgba32f, binding = 2) uniform writeonly image2D outDyeTex;
 
 uniform ivec2 Resolution;
 uniform ivec2 mousePos; 
@@ -10,8 +11,10 @@ uniform bool mousePress;
 
 vec4 Field(ivec2 pos) 
 {
+    pos = clamp(pos, ivec2(0), Resolution - ivec2(1));
     vec2 vel = imageLoad(inputTex, pos).xy;
     ivec2 advectPos = pos - ivec2(vel);
+    advectPos = clamp(advectPos, ivec2(0), Resolution - ivec2(1));
     return imageLoad(inputTex, advectPos);
 }
 
@@ -49,8 +52,9 @@ void main()
 
     Energy.xy = clamp(Energy.xy, vec2(-10.0), vec2(10.0));
 
-    Energy.b = clamp(Energy.b, 0.0, 4.0);
-    Energy.a = clamp(Energy.a, 0.0, 5.0);
+    Energy.b = clamp(Energy.b, 0.0, 1.0);
+    Energy.a = clamp(Energy.a, 0.0, 2.0);
 
-    imageStore(outputTex, Me, Energy); 
+    imageStore(outputTex, Me, vec4(Energy)); 
+    imageStore(outDyeTex, Me, vec4(0.0,0.0,0.0,Energy.a));
 }   
