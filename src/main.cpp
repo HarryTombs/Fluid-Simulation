@@ -266,9 +266,11 @@ void MainLoop() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
         glUseProgram(computeShader);
-        glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glBindImageTexture(2, dyeStart, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, ping ? velocityA : velocityB);
+        glUniform1i(glGetUniformLocation(computeShader, "velocityTex"), 0);
+        glBindImageTexture(0, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, dyeStart, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
         GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
         if (mouseLoc != -1) {
@@ -298,7 +300,7 @@ void MainLoop() {
 
         jacobiping = true;
 
-        for (int i = 0; i < 150; i++) 
+        for (int i = 0; i < 100; i++) 
         {
             glUseProgram(jacobiShader);
             glBindImageTexture(0, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
