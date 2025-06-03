@@ -300,7 +300,7 @@ void MainLoop() {
 
         jacobiping = true;
 
-        for (int i = 0; i < 100; i++) 
+        for (int i = 0; i < 50; i++) 
         {
             glUseProgram(jacobiShader);
             glBindImageTexture(0, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
