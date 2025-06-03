@@ -37,7 +37,7 @@ void main()
 
     Energy.b += (nX.x - pX.x + nY.y - pY.y) * 0.25;
 
-    Energy.y -= Energy.a / 10000.0;
+    Energy.y -= Energy.a / 1000000.0;
 
     Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) *0.25;
 
