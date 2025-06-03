@@ -14,9 +14,13 @@ SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
 GLuint divergence;
+GLuint curl;
 GLuint velocityA, velocityB;
 GLuint densityA, densityB;
 GLuint pressureA, pressureB;
+
+GLuint computeShader;
+GLuint texA, texB;
 
 GLuint renderShader, quadVAO;
 GLuint injectShader, advectShader, diffuseShader, divergenceShader, jacobiShader, subtractPressureShader;
@@ -140,15 +144,18 @@ void InitialiseProgram()
     createTexture(pressureB);
     createTexture(divergence);
 
-    glBindTexture(GL_TEXTURE_2D, velocityA);
-    for (int y = 0; y < ScreenHeight; ++y) 
-    {
-        for (int x = 0; x < ScreenWidth; ++x) 
-        {
-            float vel[4] = {0.1f, 0.1f, 0.0f, 0.0f}; // constant x-velocity
-            glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, vel);
-        }
-    }
+    createTexture(texA);
+    createTexture(texB);
+
+    // glBindTexture(GL_TEXTURE_2D, velocityA);
+    // for (int y = 0; y < ScreenHeight; ++y) 
+    // {
+    //     for (int x = 0; x < ScreenWidth; ++x) 
+    //     {
+    //         float vel[4] = {0.1f, 0.1f, 0.0f, 0.0f}; // constant x-velocity
+    //         glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, vel);
+    //     }
+    // }
     // CheckGLError("Initialize velocityA texture");
     // glBindTexture(GL_TEXTURE_2D, densityA);
     // int cx = ScreenWidth / 2;
@@ -183,6 +190,8 @@ void InitialiseProgram()
     divergenceShader = loadComputeShader("../shaders/computeDivergence.glsl");
     jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
     subtractPressureShader = loadComputeShader("../shaders/subtractPressure.glsl");
+
+    computeShader = loadComputeShader("../shaders/compute.glsl");
 
     ping = true;
 
@@ -277,91 +286,89 @@ void MainLoop() {
 
         // Density injection
 
-        glUseProgram(injectShader);
-        glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, ping ? densityB : densityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        
-        glUniform2i(glGetUniformLocation(injectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // glUseProgram(injectShader);
+        // glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        CheckGLError("Inject Shader Dispatch");
+        
+        // glUniform2i(glGetUniformLocation(injectShader, "Resolution"), ScreenWidth, ScreenHeight);
+
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Inject Shader Dispatch");
 
         // Velocity advection
 
-        glUseProgram(advectShader);
+        // glUseProgram(advectShader);
 
-        glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(2, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(2, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         
-        glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
-        glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
+        // glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
 
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         
 
         // Density advection
 
-        glUseProgram(advectShader);
+        // glUseProgram(advectShader);
 
-        glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(2, ping ? densityB : densityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(2, ping ? densityB : densityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-        glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
-        glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
+        // glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // glUniform1f(glGetUniformLocation(advectShader, "deltaTime"), deltaTime);
         
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        CheckGLError("Advect Shader Dispatch");
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Advect Shader Dispatch");
 
         // Compute Divergance 
 
-        glUseProgram(divergenceShader);
+        // glUseProgram(divergenceShader);
 
-        glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, divergence, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        // glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, divergence, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-        float cellSize = 1.0f; // or 1.0 / ScreenWidth if sim space is normalized
-        float halfrdx = 0.5f / cellSize;
+        // float cellSize = 1.0f; // or 1.0 / ScreenWidth if sim space is normalized
+        // float halfrdx = 0.5f / cellSize;
 
-        glUniform1f(glGetUniformLocation(divergenceShader, "halfrdx"), halfrdx);
-        glUniform2i(glGetUniformLocation(divergenceShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // glUniform1f(glGetUniformLocation(divergenceShader, "halfrdx"), halfrdx);
+        // glUniform2i(glGetUniformLocation(divergenceShader, "Resolution"), ScreenWidth, ScreenHeight);
 
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        CheckGLError("Divergence Shader Dispatch");
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Divergence Shader Dispatch");
 
-        bool jacobiPing = true;
+        // bool jacobiPing = true;
 
-        for (int i = 0; i < iterations; ++i)
-        {
-            glUseProgram(jacobiShader);
-            glBindImageTexture(0, jacobiPing ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-            glBindImageTexture(1, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-            glBindImageTexture(2, divergence, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-            glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-            jacobiPing = !jacobiPing;
-            CheckGLError("Jacobi Shader Dispatch");
-        }
+        // for (int i = 0; i < iterations; ++i)
+        // {
+        //     glUseProgram(jacobiShader);
+        //     glBindImageTexture(0, jacobiPing ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        //     glBindImageTexture(1, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        //     glBindImageTexture(2, divergence, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        //     glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        //     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        //     jacobiPing = !jacobiPing;
+        //     CheckGLError("Jacobi Shader Dispatch");
+        // }
 
-        glUseProgram(subtractPressureShader);
-        glBindImageTexture(0, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        // glUseProgram(subtractPressureShader);
+        // glBindImageTexture(0, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        // glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-        glUniform2i(glGetUniformLocation(subtractPressureShader, "Resolution"), ScreenWidth, ScreenHeight);
-        glUniform1f(glGetUniformLocation(subtractPressureShader, "halfrdx"), halfrdx);
+        // glUniform2i(glGetUniformLocation(subtractPressureShader, "Resolution"), ScreenWidth, ScreenHeight);
+        // glUniform1f(glGetUniformLocation(subtractPressureShader, "halfrdx"), halfrdx);
 
-        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        CheckGLError("Subtract Pressure Shader Dispatch");
+        // glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // CheckGLError("Subtract Pressure Shader Dispatch");
 
-
-
-        
 
         // glUseProgram(advectShader);
         // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -379,6 +386,9 @@ void MainLoop() {
         // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         // glUniform2i(glGetUniformLocation(advectShader, "Resolution"), ScreenWidth, ScreenHeight);
         // CheckGLError("Diffuse Shader Dispatch");
+
+
+        
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

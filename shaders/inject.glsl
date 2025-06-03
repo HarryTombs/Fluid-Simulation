@@ -2,12 +2,15 @@
 layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(rgba32f, binding = 0) uniform image2D densityTex;
+layout(rgba32f, binding = 1) uniform image2D velocityTex;
 
 uniform ivec2 Resolution;
 float densityAmount = 1.0;
+float velocityAmount = 1.0;
+
 int injectX = 250;
 int injectY = 250;
-float radius = 5;
+float radius = 5.0;
 
 
 void main() {
@@ -23,5 +26,9 @@ void main() {
     vec4 current = imageLoad(densityTex, pos);
     current.r += densityAmount * falloff;
     imageStore(densityTex, pos, current);
+
+    vec4 currentVelocity = imageLoad(velocityTex, pos);
+    currentVelocity.xy += vec2(velocityAmount, 0.0) * falloff; // e.g., to the right
+    imageStore(velocityTex, pos, currentVelocity);
 
 }
