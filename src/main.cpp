@@ -149,8 +149,8 @@ void InitialiseProgram()
 
     createTexture(velocityA);
     createTexture(velocityB);
-    createTexture(pressureA);
-    createTexture(pressureB);
+    createTexture1F(pressureA);
+    createTexture1F(pressureB);
     createTexture1F(divergence);
 
 
@@ -175,7 +175,7 @@ void InitialiseProgram()
     renderShader = loadShaderProgram("../shaders/vertex.glsl", "../shaders/fragment.glsl");
     computeShader = loadComputeShader("../shaders/compute.glsl");
     divergenceShader = loadComputeShader("../shaders/divergence.glsl");
-    // jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
+    jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
 
     ping = true;
     
@@ -258,10 +258,8 @@ void MainLoop() {
         glXLast = glX;
         glYLast = glY;
 
-
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
-
         glUseProgram(computeShader);
         glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glBindImageTexture(1, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -292,19 +290,22 @@ void MainLoop() {
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Divergence Shader Dispatch");
 
-        // jacobiping = true;
+        jacobiping = true;
 
-        // for (int i = 0; i < 20; i++) 
-        // {
-        //     glUseProgram(jacobiShader);
-        //     glBindImageTexture(0, ping ? divergence : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        //     glBindImageTexture(1, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        //     glUniform2i(glGetUniformLocation(jacobiShader, "Resolution"), ScreenWidth, ScreenHeight);
-        //     glDispatchCompute(ScreenWidth / 16 + 1, ScreenHeight / 16 + 1, 1);
-        //     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        //     CheckGLError("Jacobi Shader Dispatch");
-        //     jacobiping = !jacobiping;
-        // }
+        for (int i = 0; i < 20; i++) 
+        {
+            glUseProgram(jacobiShader);
+            glBindImageTexture(0, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+            glBindImageTexture(1, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+            glBindImageTexture(2, divergence, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+
+            glUniform2i(glGetUniformLocation(jacobiShader, "Resolution"), ScreenWidth, ScreenHeight);
+
+            glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            CheckGLError("Jacobi Shader Dispatch");
+            jacobiping = !jacobiping;
+        }
         
 
         glUseProgram(0);
