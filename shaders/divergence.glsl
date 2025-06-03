@@ -18,5 +18,5 @@ void main()
     vec2 nY = imageLoad(velocityTex, pos - ivec2(0,1)).xy;
 
     float divergence = 0.5 * ((nX.x - pX.x) + (pY.y - nY.y));
-    imageStore(DivergenceTex,pos,vec4(1.0,0.0,0.0,0.0));
+    imageStore(DivergenceTex,pos,vec4(divergence,0.0,0.0,0.0));
 }

@@ -14,10 +14,9 @@ SDL_GLContext OpenGlConext = nullptr;
 bool gQuit = false;
 
 GLuint divergence;
-GLuint curl;
 GLuint velocityA, velocityB;
-GLuint densityA, densityB;
 GLuint pressureA, pressureB;
+GLuint newVelTex;
 
 GLuint computeShader, divergenceShader, jacobiShader, GradientShader;
 
@@ -152,6 +151,7 @@ void InitialiseProgram()
     createTexture1F(pressureA);
     createTexture1F(pressureB);
     createTexture1F(divergence);
+    createTexture(newVelTex);
 
 
     glGenBuffers(1, &VBO);
@@ -176,6 +176,7 @@ void InitialiseProgram()
     computeShader = loadComputeShader("../shaders/compute.glsl");
     divergenceShader = loadComputeShader("../shaders/divergence.glsl");
     jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
+    GradientShader = loadComputeShader("../shaders/subtractGradient.glsl");
 
     ping = true;
     
@@ -292,11 +293,11 @@ void MainLoop() {
 
         jacobiping = true;
 
-        for (int i = 0; i < 20; i++) 
+        for (int i = 0; i < 100; i++) 
         {
             glUseProgram(jacobiShader);
             glBindImageTexture(0, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-            glBindImageTexture(1, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+            glBindImageTexture(1, jacobiping ? pressureB : pressureA , 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
             glBindImageTexture(2, divergence, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 
             glUniform2i(glGetUniformLocation(jacobiShader, "Resolution"), ScreenWidth, ScreenHeight);
@@ -306,6 +307,18 @@ void MainLoop() {
             CheckGLError("Jacobi Shader Dispatch");
             jacobiping = !jacobiping;
         }
+
+        glUseProgram(GradientShader);
+        glBindImageTexture(0, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, jacobiping ? pressureB : pressureA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+        glBindImageTexture(2, newVelTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+        glUniform2i(glGetUniformLocation(GradientShader, "Resolution"), ScreenWidth, ScreenHeight);
+
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        CheckGLError("Gradient Shader Dispatch");
+
         
 
         glUseProgram(0);
@@ -313,7 +326,7 @@ void MainLoop() {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
-        glBindTexture(GL_TEXTURE_2D, ping ? velocityA : velocityB);
+        glBindTexture(GL_TEXTURE_2D, newVelTex);
         glUniform1i(glGetUniformLocation(renderShader, "tex"), 0);
         glUniform2i(glGetUniformLocation(renderShader, "Resolution"), ScreenWidth, ScreenHeight);
         CheckGLError("Bind Texture");
