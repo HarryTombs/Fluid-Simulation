@@ -8,23 +8,24 @@ uniform ivec2 Resolution;
 uniform ivec2 mousePos; 
 uniform bool mousePress;
 
-vec4 Field(vec2 pos) 
+vec4 Field(ivec2 pos) 
 {
-    ivec2 velocity = imageSize(inputTex).xy;
-    vec2 vel = imageLoad(inputTex, ivec2(pos)).xy;
-    ivec2 advectPos = ivec2(pos) - ivec2(vel);
+    pos = clamp(pos, ivec2(0), Resolution - ivec2(1));
+    vec2 vel = imageLoad(inputTex, pos).xy;
+    ivec2 advectPos = pos - ivec2(vel);
+    advectPos = clamp(advectPos, ivec2(0), Resolution - ivec2(1));
     return imageLoad(inputTex, advectPos);
 }
 
 void main() 
 {
-    vec2 Me = vec2(gl_GlobalInvocationID.xy);
+    ivec2 Me = ivec2(gl_GlobalInvocationID.xy);
     vec4 Energy = Field(Me);
 
-    vec4 pX = Field(Me + vec2(1, 0));
-    vec4 nX = Field(Me - vec2(1, 0));
-    vec4 pY = Field(Me + vec2(0, 1));
-    vec4 nY = Field(Me - vec2(0, 1));
+    vec4 pX = Field(Me + ivec2(1, 0));
+    vec4 nX = Field(Me - ivec2(1, 0));
+    vec4 pY = Field(Me + ivec2(0, 1));
+    vec4 nY = Field(Me - ivec2(0, 1));
 
     // Rule 2: Disordered energy (blue) diffuses
     Energy.b = (pX.b + pY.b + nX.b + nY.b) / 4.0;
@@ -42,10 +43,10 @@ void main()
     Energy.y -= Energy.a / 300.0;
 
     // Mass conservation
-    Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) / 4.0;
+    Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) / 8.0;
 
     if (Me.x < 10 || Me.y < 10 || Resolution.x - Me.x < 10 || Resolution.y - Me.y < 10) {
-        Energy.xy *= vec2(0.0);
+        Energy.xy = vec2(0.0);
     }
 
 
@@ -58,8 +59,9 @@ void main()
     // Clamp velocity to prevent explosive growth
     Energy.xy = clamp(Energy.xy, vec2(-10.0), vec2(10.0));
 
-    Energy.b = clamp(Energy.b, 0.0, 4.0);
-    Energy.a = clamp(Energy.a, 0.0, 4.0);
+    // Clamp disorder and mass (blue and alpha)
+    Energy.b = clamp(Energy.b, 0.0, 1.0);
+    Energy.a = clamp(Energy.a, 0.0, 5.0);  // you can raise this if too weak
 
-    imageStore(outputTex, ivec2(Me), Energy); 
+    imageStore(outputTex, Me, Energy); 
 }   
