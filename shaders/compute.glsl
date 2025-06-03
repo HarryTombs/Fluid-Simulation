@@ -30,17 +30,14 @@ void main()
     // Rule 2: Disordered energy (blue) diffuses
     Energy.b = (pX.b + pY.b + nX.b + nY.b) / 4.0;
 
-    // Rule 3: Order emerges from disordered gradients
     vec2 Force;
     Force.x = nX.b - pX.b;
     Force.y = nY.b - pY.b;
     Energy.xy += Force / 4.0;
 
-    // Rule 4: Disorder created from flow
     Energy.b += (nX.x - pX.x + nY.y - pY.y) / 4.0;
 
-    // Gravity
-    Energy.y -= Energy.a / 300.0;
+    Energy.y -= Energy.a / 200.0;
 
     // Mass conservation
     Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) / 8.0;

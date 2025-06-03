@@ -23,7 +23,6 @@ GLuint computeShader;
 GLuint texA, texB;
 
 GLuint renderShader, quadVAO;
-GLuint injectShader, advectShader, diffuseShader, divergenceShader, jacobiShader, subtractPressureShader;
 
 bool ping;
 
@@ -136,34 +135,10 @@ void InitialiseProgram()
     GetOpenGLVersionInfo();
     std::cout << "OpenGL initialized successfully!" << std::endl;
 
-    createTexture(velocityA);
-    createTexture(velocityB);
-    createTexture(densityA);
-    createTexture(densityB);
-    createTexture(pressureA);
-    createTexture(pressureB);
-    createTexture(divergence);
 
     createTexture(texA);
     createTexture(texB);
 
-    // glBindTexture(GL_TEXTURE_2D, velocityA);
-    // for (int y = 0; y < ScreenHeight; ++y) 
-    // {
-    //     for (int x = 0; x < ScreenWidth; ++x) 
-    //     {
-    //         float vel[4] = {0.1f, 0.1f, 0.0f, 0.0f}; // constant x-velocity
-    //         glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, vel);
-    //     }
-    // }
-    // CheckGLError("Initialize velocityA texture");
-    // glBindTexture(GL_TEXTURE_2D, densityA);
-    // int cx = ScreenWidth / 2;
-    // int cy = ScreenHeight / 2;
-    // float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    // glTexSubImage2D(GL_TEXTURE_2D, 0, cx, cy, 1, 1, GL_RGBA, GL_FLOAT, color);
-
-    
 
     glGenBuffers(1, &VBO);
     CheckGLError("glGenBuffers");
@@ -184,12 +159,6 @@ void InitialiseProgram()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     renderShader = loadShaderProgram("../shaders/vertex.glsl", "../shaders/fragment.glsl");
-    advectShader = loadComputeShader("../shaders/advect.glsl");
-    injectShader = loadComputeShader("../shaders/inject.glsl");
-    diffuseShader = loadComputeShader("../shaders/diffuse.glsl");
-    divergenceShader = loadComputeShader("../shaders/computeDivergence.glsl");
-    jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
-    subtractPressureShader = loadComputeShader("../shaders/subtractPressure.glsl");
 
     computeShader = loadComputeShader("../shaders/compute.glsl");
 
@@ -215,8 +184,6 @@ void Input() {
                 glX = ( e.motion.x); 
                 glY = ((ScreenHeight - e.motion.y));
             }
-            glX = glX / (ScreenWidth);
-            glY = glY / (ScreenHeight);
         }
         if (e.type == SDL_MOUSEMOTION) 
         {
@@ -225,9 +192,6 @@ void Input() {
                 glX = (e.motion.x);  
                 glY = ((ScreenHeight - e.motion.y)); 
             }
-            glX = glX / (ScreenWidth);
-            glY = glY / (ScreenHeight);
-            // std::cout << "Mouse Position: (" << glX << ", " << glY << ")" << std::endl;
             
         }
         if (e.type == SDL_MOUSEBUTTONUP) 
@@ -278,9 +242,6 @@ void MainLoop() {
         glXLast = glX;
         glYLast = glY;
 
-        // std::cout << "Mouse Delta: (" << glXDelta << ", " << glYDelta << ")" << std::endl;
-
-        // std::cout << "Delta Time: " << deltaTime << " seconds" << std::endl;
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -305,7 +266,7 @@ void MainLoop() {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
-        glBindTexture(GL_TEXTURE_2D, ping ? densityA : densityB);
+        glBindTexture(GL_TEXTURE_2D, ping ? texB : texA);
         glUniform1i(glGetUniformLocation(renderShader, "tex"), 0);
         glUniform2i(glGetUniformLocation(renderShader, "Resolution"), ScreenWidth, ScreenHeight);
         CheckGLError("Bind Texture");
@@ -321,19 +282,6 @@ void MainLoop() {
         ping = !ping;
 
 
-        /*
-        VORTICTY CONFINEMENT
-        adding curl to the velocity field to create vortices
-        curl strength and that
-
-        INCOMPRESSSIBLITY 
-        Compute divergence of velocity field
-        Compute pressure field to remove divergence
-        Apply pressure gradient to velocity field
-        
-        
-        */
-
 
     }
 }
@@ -343,11 +291,6 @@ void CleanUp()
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteProgram(renderShader);
-    glDeleteProgram(advectShader);
-    glDeleteProgram(injectShader);
-    glDeleteProgram(diffuseShader);
-    glDeleteProgram(divergenceShader);
-    glDeleteProgram(jacobiShader);
     SDL_GL_DeleteContext(OpenGlConext);
     SDL_DestroyWindow(GraphicsApplicationWindow);
     SDL_Quit();
