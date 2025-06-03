@@ -41,7 +41,7 @@ void main()
 
     Energy.a += (nX.x * nX.a - pX.x * pX.a + nY.y * nY.a - pY.y * pY.a) *0.25;
 
-    if (Me.x < 10 || Me.y < 10 || Resolution.x - Me.x < 10 || Resolution.y - Me.y < 10) {
+    if (Me.x < 1 || Me.y < 1 || Resolution.x - Me.x < 1 || Resolution.y - Me.y < 1) {
         Energy.xy = vec2(0.0);
     }
 
@@ -50,7 +50,7 @@ void main()
         Energy.a = 1.0; // inject mass
     }
 
-    Energy.xy = clamp(Energy.xy, vec2(-10.0), vec2(10.0));
+    Energy.xy = clamp(Energy.xy, vec2(-1.0), vec2(1.0));
 
     Energy.b = clamp(Energy.b, 0.0, 1.0);
     Energy.a = clamp(Energy.a, 0.0, 2.0);

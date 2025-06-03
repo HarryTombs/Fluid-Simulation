@@ -2,27 +2,29 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(rgba32f, binding = 0) uniform readonly image2D oldDye;
-layout(rgba32f, binding = 1) uniform readonly image2D velocityTex;
-layout(rgba32f, binding = 2) uniform writeonly image2D newDye;
+layout(rgba32f, binding = 0) uniform readonly image2D velocityTex;
+layout(rgba32f, binding = 1) uniform writeonly image2D newDye;
 
-uniform float dt;
+uniform sampler2D oldDye;
+
+uniform float deltaTime;
 uniform ivec2 Resolution;
-vec2 texelSize = 1.0 / Resolution;
+float dissipation = 0.99;
 
 
 void main() {
-    ivec2 Me = ivec2(gl_GlobalInvocationID.xy);
-    if (Me.x >= Resolution.x || Me.y >= Resolution.y) return;
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if (pos.x >= Resolution.x || pos.y >= Resolution.y) return;
 
-    vec2 uv = (vec2(Me) + 0.5) * texelSize;
+    vec2 uv = (vec2(pos)+0.5) / Resolution;
 
-    vec2 vel = imageLoad(velocityTex, Me).xy;
+    vec2 vel = imageLoad(velocityTex, pos).xy;
 
-    // Backtrace
-    ivec2 prevUV = ivec2(uv - dt * vel * texelSize);
+    vec2 prevUV = uv - (deltaTime * vel / Resolution);
 
-    vec4 dye = imageLoad(oldDye, prevUV);
+    vec4 advected = textureLod(oldDye,prevUV,0.0);
 
-    imageStore(newDye, Me, dye);
+    advected *= dissipation;
+    
+    imageStore(newDye, pos, advected);
 }

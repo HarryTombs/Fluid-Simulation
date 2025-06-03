@@ -298,7 +298,7 @@ void MainLoop() {
 
         jacobiping = true;
 
-        for (int i = 0; i < 300; i++) 
+        for (int i = 0; i < 150; i++) 
         {
             glUseProgram(jacobiShader);
             glBindImageTexture(0, jacobiping ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
@@ -326,11 +326,15 @@ void MainLoop() {
         CheckGLError("Gradient Shader Dispatch");
 
         glUseProgram(DyeShader);
-        glBindImageTexture(0, dyeStart, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, newVelTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(2, dyeEnd, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(0, newVelTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, dyeEnd, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, dyeStart);
+        glUniform1i(glGetUniformLocation(DyeShader, "oldDye"), 0);
 
         glUniform2i(glGetUniformLocation(DyeShader, "Resolution"), ScreenWidth, ScreenHeight);
+        glUniform1f(glGetUniformLocation(DyeShader, "deltaTime"), deltaTime);
 
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
