@@ -262,7 +262,6 @@ void MainLoop() {
             glUniform1i(mousePress,mouseDown ? 1 : 0);
         }
         glUniform2i(glGetUniformLocation(computeShader, "Resolution"), ScreenWidth, ScreenHeight);
-        // std::cout << "Resolution: " << ScreenWidth << "x" << ScreenHeight << std::endl;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
