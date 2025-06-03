@@ -18,8 +18,8 @@ GLuint velocityA, velocityB;
 GLuint densityA, densityB;
 GLuint pressureA, pressureB;
 
-GLuint computeShader, renderShader, quadVAO;
-GLuint injectShader, advectShader, diffuseShader;
+GLuint renderShader, quadVAO;
+GLuint injectShader, advectShader, diffuseShader, divergenceShader, jacobiShader, subtractPressureShader;
 
 bool ping;
 
@@ -30,6 +30,8 @@ float glYLast = -1.0f;
 float glXDelta = 0.0f;
 float glYDelta = 0.0f;
 bool mouseDown = false;
+
+int iterations = 20;
 
 Uint64 NOW = SDL_GetPerformanceCounter();
 Uint64 LAST = 0;
@@ -147,12 +149,12 @@ void InitialiseProgram()
             glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, vel);
         }
     }
-    CheckGLError("Initialize velocityA texture");
-    glBindTexture(GL_TEXTURE_2D, densityA);
-    int cx = ScreenWidth / 2;
-    int cy = ScreenHeight / 2;
-    float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glTexSubImage2D(GL_TEXTURE_2D, 0, cx, cy, 1, 1, GL_RGBA, GL_FLOAT, color);
+    // CheckGLError("Initialize velocityA texture");
+    // glBindTexture(GL_TEXTURE_2D, densityA);
+    // int cx = ScreenWidth / 2;
+    // int cy = ScreenHeight / 2;
+    // float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    // glTexSubImage2D(GL_TEXTURE_2D, 0, cx, cy, 1, 1, GL_RGBA, GL_FLOAT, color);
 
     
 
@@ -174,11 +176,13 @@ void InitialiseProgram()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    computeShader = loadComputeShader("../shaders/compute.glsl");
     renderShader = loadShaderProgram("../shaders/vertex.glsl", "../shaders/fragment.glsl");
     advectShader = loadComputeShader("../shaders/advect.glsl");
     injectShader = loadComputeShader("../shaders/inject.glsl");
     diffuseShader = loadComputeShader("../shaders/diffuse.glsl");
+    divergenceShader = loadComputeShader("../shaders/computeDivergence.glsl");
+    jacobiShader = loadComputeShader("../shaders/jacobi.glsl");
+    subtractPressureShader = loadComputeShader("../shaders/subtractPressure.glsl");
 
     ping = true;
 
@@ -232,17 +236,17 @@ void Input() {
 
 void setMouseUniform(GLuint shader)
 {
-    GLuint mouseLoc = glGetUniformLocation(computeShader, "mousePos");
+    GLuint mouseLoc = glGetUniformLocation(shader, "mousePos");
     if (mouseLoc != -1) 
     {
         glUniform2f(mouseLoc, glX, glY);
     }
-    GLuint mousePress = glGetUniformLocation(computeShader, "mousePress");
+    GLuint mousePress = glGetUniformLocation(shader, "mousePress");
     if (mousePress != -1) 
     {
         glUniform1i(mousePress,mouseDown ? 1 : 0);
     }
-    GLuint mouseDeltaLoc = glGetUniformLocation(computeShader, "mouseDelta");
+    GLuint mouseDeltaLoc = glGetUniformLocation(shader, "mouseDelta");
     glUniform2f(mouseDeltaLoc, glXDelta, glYDelta);
 }
 
@@ -270,6 +274,8 @@ void MainLoop() {
         // std::cout << "Delta Time: " << deltaTime << " seconds" << std::endl;
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Density injection
 
         glUseProgram(injectShader);
         glBindImageTexture(0, ping ? densityA : densityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -310,7 +316,53 @@ void MainLoop() {
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Advect Shader Dispatch");
+
+        // Compute Divergance 
+
+        glUseProgram(divergenceShader);
+
+        glBindImageTexture(0, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, divergence, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+        float cellSize = 1.0f; // or 1.0 / ScreenWidth if sim space is normalized
+        float halfrdx = 0.5f / cellSize;
+
+        glUniform1f(glGetUniformLocation(divergenceShader, "halfrdx"), halfrdx);
+        glUniform2i(glGetUniformLocation(divergenceShader, "Resolution"), ScreenWidth, ScreenHeight);
+
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        CheckGLError("Divergence Shader Dispatch");
+
+        bool jacobiPing = true;
+
+        for (int i = 0; i < iterations; ++i)
+        {
+            glUseProgram(jacobiShader);
+            glBindImageTexture(0, jacobiPing ? pressureA : pressureB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+            glBindImageTexture(1, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            glBindImageTexture(2, divergence, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+            glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            jacobiPing = !jacobiPing;
+            CheckGLError("Jacobi Shader Dispatch");
+        }
+
+        glUseProgram(subtractPressureShader);
+        glBindImageTexture(0, jacobiPing ? pressureB : pressureA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, ping ? velocityA : velocityB, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+        glUniform2i(glGetUniformLocation(subtractPressureShader, "Resolution"), ScreenWidth, ScreenHeight);
+        glUniform1f(glGetUniformLocation(subtractPressureShader, "halfrdx"), halfrdx);
+
+        glDispatchCompute(ScreenWidth, ScreenHeight, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        CheckGLError("Subtract Pressure Shader Dispatch");
+
+
+
         
+
         // glUseProgram(advectShader);
         // glBindImageTexture(0, ping ? texA : texB, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         // glBindImageTexture(1, ping ? texB : texA, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -332,7 +384,7 @@ void MainLoop() {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
-        glBindTexture(GL_TEXTURE_2D, ping ? densityB : densityA);
+        glBindTexture(GL_TEXTURE_2D, ping ? densityA : densityB);
         glUniform1i(glGetUniformLocation(renderShader, "tex"), 0);
         glUniform2i(glGetUniformLocation(renderShader, "Resolution"), ScreenWidth, ScreenHeight);
         CheckGLError("Bind Texture");
@@ -348,6 +400,20 @@ void MainLoop() {
         ping = !ping;
 
 
+        /*
+        VORTICTY CONFINEMENT
+        adding curl to the velocity field to create vortices
+        curl strength and that
+
+        INCOMPRESSSIBLITY 
+        Compute divergence of velocity field
+        Compute pressure field to remove divergence
+        Apply pressure gradient to velocity field
+        
+        
+        */
+
+
     }
 }
 
@@ -355,11 +421,12 @@ void CleanUp()
 {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteProgram(computeShader);
     glDeleteProgram(renderShader);
     glDeleteProgram(advectShader);
     glDeleteProgram(injectShader);
     glDeleteProgram(diffuseShader);
+    glDeleteProgram(divergenceShader);
+    glDeleteProgram(jacobiShader);
     SDL_GL_DeleteContext(OpenGlConext);
     SDL_DestroyWindow(GraphicsApplicationWindow);
     SDL_Quit();
