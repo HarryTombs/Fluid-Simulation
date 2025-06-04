@@ -17,14 +17,16 @@ void main() {
     if (pos.x >= Resolution.x || pos.y >= Resolution.y) return;
 
     vec2 uv = (vec2(pos)+0.5) / Resolution;
-
     vec2 vel = imageLoad(velocityTex, pos).xy;
 
-    vec2 prevUV = uv - (deltaTime * vel / Resolution);
+    // finding previous UV co-ordinate for Semi-Lagrangian advection
 
+    vec2 prevUV = uv - (deltaTime * vel / Resolution);
     vec4 advected = textureLod(oldDye,prevUV,0.0);
 
     advected *= dissipation;
+
+    // new dye positon outputed to fragment shader
     
     imageStore(newDye, pos, advected);
 }

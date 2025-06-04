@@ -228,21 +228,6 @@ void Input() {
     }
 }
 
-void setMouseUniform(GLuint shader)
-{
-    GLuint mouseLoc = glGetUniformLocation(shader, "mousePos");
-    if (mouseLoc != -1) 
-    {
-        glUniform2f(mouseLoc, glX, glY);
-    }
-    GLuint mousePress = glGetUniformLocation(shader, "mousePress");
-    if (mousePress != -1) 
-    {
-        glUniform1i(mousePress,mouseDown ? 1 : 0);
-    }
-    GLuint mouseDeltaLoc = glGetUniformLocation(shader, "mouseDelta");
-    glUniform2f(mouseDeltaLoc, glXDelta, glYDelta);
-}
 
 
 
@@ -251,20 +236,18 @@ void MainLoop() {
     {
         Input();
 
+        // Get Delta time
+
         LAST = NOW;
         NOW = SDL_GetPerformanceCounter();
 
         deltaTime = (double)((NOW - LAST) * 1000) / SDL_GetPerformanceFrequency();
         deltaTime /= 1000.0;
 
-        glXDelta = glX - glXLast;
-        glYDelta = glY - glYLast;
-
-        glXLast = glX;
-        glYLast = glY;
-
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
+        // Injection and inital velocity shader
+
         glUseProgram(computeShader);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ping ? velocityA : velocityB);
@@ -287,6 +270,7 @@ void MainLoop() {
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Compute Shader Dispatch");
 
+        // Compute Divergence
 
         glUseProgram(divergenceShader);
         glBindImageTexture(0, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -297,6 +281,8 @@ void MainLoop() {
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Divergence Shader Dispatch");
+
+        // Jacobi Iteration for Pressure Solver
 
         jacobiping = true;
 
@@ -316,6 +302,8 @@ void MainLoop() {
 
         }
 
+        // Subtract Difference for pressure solve
+
         glUseProgram(GradientShader);
         glBindImageTexture(0, ping ? velocityB : velocityA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glBindImageTexture(1, jacobiping ? pressureB : pressureA, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
@@ -326,6 +314,8 @@ void MainLoop() {
         glDispatchCompute(ScreenWidth, ScreenHeight, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Gradient Shader Dispatch");
+
+        // Advect Dye based on new velocity
 
         glUseProgram(DyeShader);
         glBindImageTexture(0, newVelTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -342,10 +332,10 @@ void MainLoop() {
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         CheckGLError("Dye Shader Dispatch");
 
-        
-
         glUseProgram(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Render the result
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderShader);
@@ -361,6 +351,7 @@ void MainLoop() {
         CheckGLError("RenderQuad");
         SDL_GL_SwapWindow(GraphicsApplicationWindow);
         
+        // Ping Pong Logic
 
         ping = !ping;
 

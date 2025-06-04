@@ -13,6 +13,8 @@ void main()
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     if (pos.x >= Resolution.x || pos.y >= Resolution.y) return;
 
+    // Smooting iterations based on current pressure and calculated divergence
+
     float pX = imageLoad(pressureTexIn, pos + ivec2(1,0)).x;
     float nX = imageLoad(pressureTexIn, pos - ivec2(1,0)).x;
     float pY = imageLoad(pressureTexIn, pos + ivec2(0,1)).x;

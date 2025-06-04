@@ -18,6 +18,8 @@ void main()
     float pY = imageLoad(pressureTexIn, pos + ivec2(0,1)).x;
     float nY = imageLoad(pressureTexIn, pos - ivec2(0,1)).x;
 
+    // subtracting pressure gradient after smoothing iterations
+
     vec4 v = imageLoad(velocityTex,pos);
     float dye = v.a;
     vec2 velocity = v.xy;
